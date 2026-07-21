@@ -13,3 +13,12 @@ wheels/
 .env
 
 dumps/
+
+# Data files
+*.csv
+data.csv
+processed_data.csv
+embargoed_items.csv
+
+# Migration outputs
+saf_bundle/

@@ -5,6 +5,7 @@ description = "Migrating local UFAL thesis repository to DSpace"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "pandas>=3.0.3",
     "psycopg2-binary>=2.9.11",
     "python-dotenv>=1.2.2",
 ]
