@@ -1,0 +1,1 @@
+A tabela central da publicação é ud_biblioteca_publicacao

@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: biblioteca
+    restart: no
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: biblioteca
+    ports:
+      - "5440:5432"
+    volumes:
+      - biblioteca_data:/var/lib/postgresql
+      - ./dumps:/dumps
+
+volumes:
+  biblioteca_data:
