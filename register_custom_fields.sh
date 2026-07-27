@@ -3,8 +3,8 @@
 # ==============================================================================
 # Script de Registro de Campos Customizados do Dublin Core no DSpace
 # ==============================================================================
-# Este script insere campos de metadados adicionais exigidos pela migração no 
-# 'metadatafieldregistry' do PostgreSQL do DSpace (banco dspacedb).
+# Este script registra exclusivamente os campos de metadados ausentes por 
+# padrão no esquemas Dublin Core ('dc') do DSpace, necessários para a migração.
 #
 # Uso:
 #   chmod +x register_custom_fields.sh
@@ -31,13 +31,12 @@ SELECT
     elem.scope_note
 FROM (
     VALUES 
-        ('publisher', 'department', 'Departamento, Campus ou Centro de ensino da instituição.'),
-        ('description', 'degree', 'Nome do Curso ou Programa de Pós-Graduação (ex: Ciência da Computação).'),
-        ('contributor', 'coadvisor', 'Nome do Coorientador do trabalho acadêmico (Sobrenome, Nome).'),
-        ('contributor', 'committee', 'Membros da Banca Examinadora / Avaliadores de defesa.'),
-        ('description', 'note', 'Notas de acervo físico, observações internas ou notas gerais.'),
-        ('publisher', 'place', 'Local / Cidade e Estado de defesa ou publicação.'),
-        ('type', 'degree', 'Nível ou tipo do grau acadêmico (ex: Graduação, Mestrado, Doutorado).')
+        ('publisher', 'department', 'Departamento, Campus ou Centro de Ensino responsável pela publicação/defesa.'),
+        ('contributor', 'coadvisor', 'Nome do Coorientador do trabalho acadêmico (Formato: Sobrenome, Nome).'),
+        ('contributor', 'committee', 'Membros da Banca Examinadora e avaliadores de defesa do trabalho.'),
+        ('description', 'note', 'Notas sobre localização de acervo físico, observações internas ou notas gerais.'),
+        ('publisher', 'place', 'Localidade (Cidade e Estado da Federação) da defesa ou publicação.'),
+        ('type', 'degree', 'Nível ou tipo do grau acadêmico obtido (ex: Graduação, Mestrado, Doutorado).')
 ) AS elem(element, qualifier, scope_note)
 WHERE NOT EXISTS (
     SELECT 1 
