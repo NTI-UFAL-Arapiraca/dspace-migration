@@ -37,15 +37,16 @@ BATCH_SIZE     = int(os.getenv("BATCH_SIZE", "50"))
 # ---------------------------------------------------------------------------
 EXIBIR_PDF_FILTER = True  # change to False to extract restricted files
 
-# 1. Consulta apenas os IDs (extremamente leve, poucos KBs de RAM no container)
+# 1. Consulta apenas os IDs válidos (ignora registros com publicacao_id nulo)
 IDS_QUERY = """
     SELECT publicacao_id
     FROM ud_biblioteca_anexo
-    WHERE exibir_pdf = %(exibir_pdf)s
+    WHERE publicacao_id IS NOT NULL
+      AND exibir_pdf = %(exibir_pdf)s
     ORDER BY publicacao_id;
 """
 
-# 2. Consulta de binários por lote específico de IDs (processa apenas N PDFs por query)
+# 2. Consulta de binários por lote específico de IDs
 BATCH_BINARY_QUERY = """
     SELECT publicacao_id, arquivo
     FROM ud_biblioteca_anexo
@@ -73,7 +74,7 @@ def extract_pdfs() -> None:
     logger.info("Conexão estabelecida com sucesso.")
 
     try:
-        # 1. Busca apenas a lista de IDs inteiros (não consome memória do PostgreSQL)
+        # 1. Busca apenas a lista de IDs inteiros válidos
         with conn.cursor() as cur:
             logger.info("Buscando lista de IDs a processar...")
             cur.execute(IDS_QUERY, {"exibir_pdf": EXIBIR_PDF_FILTER})
@@ -102,11 +103,11 @@ def extract_pdfs() -> None:
         skipped_nodir = 0
         processed_total = 0
 
-        # 2. Iterar lote a lote fazendo queries individuais pelos binários daquele lote
+        # 2. Iterar lote a lote fazendo queries individuais pelos binários
         with conn.cursor() as cur:
             for batch_index, chunk in enumerate(id_chunks, start=1):
                 logger.info(
-                    "Processando lote %d/%d (IDs %d a %d)... [%d/%d]",
+                    "Processando lote %d/%d (IDs %s a %s)... [%d/%d]",
                     batch_index,
                     len(id_chunks),
                     chunk[0],
