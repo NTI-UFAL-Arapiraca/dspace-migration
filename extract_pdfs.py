@@ -1,3 +1,4 @@
+import base64
 import logging
 import os
 import sys
@@ -53,6 +54,60 @@ BATCH_BINARY_QUERY = """
     WHERE publicacao_id = ANY(%(id_list)s)
     ORDER BY publicacao_id;
 """
+
+
+def decode_pdf_bytes(raw_data) -> bytes:
+    """Decodifica os dados do PDF garantindo arquivo binário válido (%PDF-).
+    Trata memoryview, hex format de bytea do PostgreSQL (\\x...) e Base64 do Odoo.
+    """
+    if raw_data is None:
+        return b""
+
+    # Converte memoryview / bytearray / str para bytes
+    if isinstance(raw_data, memoryview):
+        data = bytes(raw_data)
+    elif isinstance(raw_data, str):
+        data = raw_data.encode("utf-8")
+    else:
+        data = bytes(raw_data)
+
+    # 1. Se já for o binário puro do PDF (magic bytes %PDF-)
+    if data.startswith(b"%PDF-"):
+        return data
+
+    # 2. Se for formato Hex do PostgreSQL (\x25504446...)
+    if data.startswith(b"\\x"):
+        try:
+            hex_str = data[2:].decode("ascii")
+            decoded = bytes.fromhex(hex_str)
+            return decoded
+        except Exception:
+            pass
+
+    # 3. Se for string Base64 (típico do Odoo, onde %PDF- vira JVBERi...)
+    if data.startswith(b"JVBERi"):
+        try:
+            return base64.b64decode(data)
+        except Exception:
+            pass
+
+    # 4. Tenta decodificação Base64 genérica
+    try:
+        decoded = base64.b64decode(data)
+        if decoded.startswith(b"%PDF-"):
+            return decoded
+    except Exception:
+        pass
+
+    # 5. Tenta decodificação Hex genérica
+    try:
+        decoded = bytes.fromhex(data.decode("ascii"))
+        if decoded.startswith(b"%PDF-"):
+            return decoded
+    except Exception:
+        pass
+
+    return data
 
 
 def connect() -> psycopg2.extensions.connection:
@@ -143,10 +198,18 @@ def extract_pdfs() -> None:
                         skipped_null += 1
                         continue
 
-                    # C. Gravação do arquivo PDF no diretório do item
+                    # C. Decodificação do binário (Base64, Hex ou Raw) e gravação
                     dest = item_dir / "documento.pdf"
                     try:
-                        pdf_bytes = bytes(arquivo)
+                        pdf_bytes = decode_pdf_bytes(arquivo)
+                        if not pdf_bytes:
+                            logger.warning(
+                                "Falha ao decodificar PDF para publicacao_id=%s — registro ignorado.",
+                                publicacao_id,
+                            )
+                            skipped_null += 1
+                            continue
+
                         dest.write_bytes(pdf_bytes)
                         written += 1
                         logger.debug(
