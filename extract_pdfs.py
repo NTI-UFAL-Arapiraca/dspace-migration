@@ -30,25 +30,26 @@ DB_USER     = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
 
 SAF_BUNDLE_DIR = Path(os.getenv("SAF_BUNDLE_DIR", "saf_bundle"))
-BATCH_SIZE     = int(os.getenv("BATCH_SIZE", "100"))
+BATCH_SIZE     = int(os.getenv("BATCH_SIZE", "50"))
 
 # ---------------------------------------------------------------------------
 # Filter — change to "false" to extract items where exibir_pdf IS false.
 # ---------------------------------------------------------------------------
 EXIBIR_PDF_FILTER = True  # change to False to extract restricted files
 
-COUNT_QUERY = """
-    SELECT COUNT(*)
-    FROM ud_biblioteca_anexo
-    WHERE exibir_pdf = %(exibir_pdf)s;
-"""
-
-QUERY = """
-    SELECT
-        publicacao_id,
-        arquivo
+# 1. Consulta apenas os IDs (extremamente leve, poucos KBs de RAM no container)
+IDS_QUERY = """
+    SELECT publicacao_id
     FROM ud_biblioteca_anexo
     WHERE exibir_pdf = %(exibir_pdf)s
+    ORDER BY publicacao_id;
+"""
+
+# 2. Consulta de binários por lote específico de IDs (processa apenas N PDFs por query)
+BATCH_BINARY_QUERY = """
+    SELECT publicacao_id, arquivo
+    FROM ud_biblioteca_anexo
+    WHERE publicacao_id = ANY(%(id_list)s)
     ORDER BY publicacao_id;
 """
 
@@ -72,44 +73,51 @@ def extract_pdfs() -> None:
     logger.info("Conexão estabelecida com sucesso.")
 
     try:
-        # 1. Contagem total sem carregar os binários
-        with conn.cursor() as count_cur:
-            count_cur.execute(COUNT_QUERY, {"exibir_pdf": EXIBIR_PDF_FILTER})
-            total_records = count_cur.fetchone()[0]
+        # 1. Busca apenas a lista de IDs inteiros (não consome memória do PostgreSQL)
+        with conn.cursor() as cur:
+            logger.info("Buscando lista de IDs a processar...")
+            cur.execute(IDS_QUERY, {"exibir_pdf": EXIBIR_PDF_FILTER})
+            all_ids = [row[0] for row in cur.fetchall()]
 
+        total_records = len(all_ids)
         logger.info(
-            "Total de registros a processar (exibir_pdf = %s): %d",
+            "Total de IDs obtidos (exibir_pdf = %s): %d",
             EXIBIR_PDF_FILTER,
             total_records,
         )
-        logger.info("Tamanho do lote (batch_size): %d", BATCH_SIZE)
+        logger.info("Tamanho do lote por query: %d IDs", BATCH_SIZE)
 
-        # Counters
+        if total_records == 0:
+            logger.info("Nenhum registro encontrado.")
+            return
+
+        # Dividir a lista de IDs em pequenos pedaços (chunks)
+        id_chunks = [
+            all_ids[i : i + BATCH_SIZE]
+            for i in range(0, total_records, BATCH_SIZE)
+        ]
+
         written       = 0
         skipped_null  = 0
         skipped_nodir = 0
         processed_total = 0
 
-        # 2. Utilização de cursor server-side nomeado para streaming em lotes
-        # Evita carregar todos os binários (bytea) de uma só vez na RAM
-        with conn.cursor(name="extract_pdf_server_cursor") as cur:
-            cur.itersize = BATCH_SIZE
-            cur.execute(QUERY, {"exibir_pdf": EXIBIR_PDF_FILTER})
-
-            batch_num = 0
-            while True:
-                rows = cur.fetchmany(BATCH_SIZE)
-                if not rows:
-                    break
-
-                batch_num += 1
+        # 2. Iterar lote a lote fazendo queries individuais pelos binários daquele lote
+        with conn.cursor() as cur:
+            for batch_index, chunk in enumerate(id_chunks, start=1):
                 logger.info(
-                    "Processando lote %d (%d registros)... [%d/%d]",
-                    batch_num,
-                    len(rows),
-                    min(processed_total + len(rows), total_records),
+                    "Processando lote %d/%d (IDs %d a %d)... [%d/%d]",
+                    batch_index,
+                    len(id_chunks),
+                    chunk[0],
+                    chunk[-1],
+                    min(processed_total + len(chunk), total_records),
                     total_records,
                 )
+
+                # Busca apenas os binários dos IDs deste lote específico
+                cur.execute(BATCH_BINARY_QUERY, {"id_list": chunk})
+                rows = cur.fetchall()
 
                 for publicacao_id, arquivo in rows:
                     processed_total += 1
@@ -150,6 +158,9 @@ def extract_pdfs() -> None:
                             exc,
                         )
                         skipped_null += 1
+
+                # Liberar explicitamente referências a rows do lote anterior
+                del rows
 
         # Summary
         logger.info("=" * 60)
