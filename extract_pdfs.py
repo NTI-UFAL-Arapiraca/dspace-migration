@@ -50,7 +50,6 @@ IDS_QUERY = """
 """
 
 # 2. TODOS os anexos de cada lote de publicações, ordenados por publicacao_id e id
-#    (id garante ordem de inserção — primeiro arquivo cadastrado = principal)
 BATCH_BINARY_QUERY = """
     SELECT publicacao_id, id, name, arquivo
     FROM ud_biblioteca_anexo
@@ -59,14 +58,12 @@ BATCH_BINARY_QUERY = """
     ORDER BY publicacao_id, id;
 """
 
-# Caracteres inválidos em nomes de arquivo (Windows e Linux)
 INVALID_FILENAME_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 
 
 def sanitize_filename(name: str) -> str:
     """Remove ou substitui caracteres inválidos em nomes de arquivo."""
     cleaned = INVALID_FILENAME_CHARS.sub("_", name).strip()
-    # Limita o comprimento para evitar problemas com paths muito longos
     if len(cleaned) > 200:
         stem = Path(cleaned).stem[:195]
         suffix = Path(cleaned).suffix
@@ -88,25 +85,21 @@ def decode_pdf_bytes(raw_data) -> bytes:
     else:
         data = bytes(raw_data)
 
-    # 1. Binário puro do PDF (magic bytes %PDF-)
     if data.startswith(b"%PDF-"):
         return data
 
-    # 2. Formato Hex do PostgreSQL (\x25504446...)
     if data.startswith(b"\\x"):
         try:
             return bytes.fromhex(data[2:].decode("ascii"))
         except Exception:
             pass
 
-    # 3. Base64 do Odoo (onde %PDF- vira JVBERi...)
     if data.startswith(b"JVBERi"):
         try:
             return base64.b64decode(data)
         except Exception:
             pass
 
-    # 4. Tentativa genérica de Base64
     try:
         decoded = base64.b64decode(data)
         if decoded.startswith(b"%PDF-"):
@@ -114,7 +107,6 @@ def decode_pdf_bytes(raw_data) -> bytes:
     except Exception:
         pass
 
-    # 5. Tentativa genérica de Hex
     try:
         decoded = bytes.fromhex(data.decode("ascii"))
         if decoded.startswith(b"%PDF-"):
@@ -123,6 +115,38 @@ def decode_pdf_bytes(raw_data) -> bytes:
         pass
 
     return data
+
+
+def cleanup_orphaned_contents(saf_bundle_dir: Path) -> None:
+    """Remove ou corrige arquivos 'contents' cujos arquivos listados não existem no disco."""
+    if not saf_bundle_dir.is_dir():
+        return
+
+    cleaned = 0
+    removed = 0
+    for item_dir in saf_bundle_dir.glob("item_*"):
+        contents_file = item_dir / "contents"
+        if contents_file.is_file():
+            lines = contents_file.read_text(encoding="utf-8").splitlines()
+            valid_files = [
+                line.strip()
+                for line in lines
+                if line.strip() and (item_dir / line.strip()).is_file()
+            ]
+            if valid_files:
+                if len(valid_files) != len(lines):
+                    contents_file.write_text("\n".join(valid_files) + "\n", encoding="utf-8")
+                    cleaned += 1
+            else:
+                contents_file.unlink()
+                removed += 1
+
+    if cleaned > 0 or removed > 0:
+        logger.info(
+            "Limpeza de arquivos 'contents': %d corrigidos, %d removidos (itens sem anexos).",
+            cleaned,
+            removed,
+        )
 
 
 def connect() -> psycopg2.extensions.connection:
@@ -160,6 +184,7 @@ def extract_pdfs() -> None:
 
         if total_records == 0:
             logger.info("Nenhum registro encontrado.")
+            cleanup_orphaned_contents(SAF_BUNDLE_DIR)
             return
 
         id_chunks = [
@@ -191,8 +216,6 @@ def extract_pdfs() -> None:
                 })
                 rows = cur.fetchall()
 
-                # Agrupar todos os anexos por publicacao_id
-                # Cada entrada: {publicacao_id: [(id, name, arquivo), ...]}
                 pub_attachments: dict = defaultdict(list)
                 for publicacao_id, anexo_id, name, arquivo in rows:
                     pub_attachments[publicacao_id].append((anexo_id, name, arquivo))
@@ -222,21 +245,17 @@ def extract_pdfs() -> None:
                     if len(attachments) > 1:
                         multi_attachment_pubs += 1
 
-                    # Rastrear nomes já usados para evitar colisões dentro do item
                     used_names: set = set()
                     contents_lines: list = []
 
                     for anexo_id, raw_name, arquivo in attachments:
-                        # Gerar nome de arquivo final limpo e único
                         safe_name = sanitize_filename(raw_name or f"documento_{anexo_id}.pdf")
-                        # Resolver colisões (ex: se dois anexos tiverem o mesmo nome)
                         if safe_name in used_names:
                             stem = Path(safe_name).stem
                             suffix = Path(safe_name).suffix or ".pdf"
                             safe_name = f"{stem}_{anexo_id}{suffix}"
                         used_names.add(safe_name)
 
-                        # Validar binário
                         if not arquivo:
                             logger.warning(
                                 "Arquivo binário nulo para publicacao_id=%s, anexo_id=%s (%s) — ignorado.",
@@ -247,7 +266,6 @@ def extract_pdfs() -> None:
                             skipped_null += 1
                             continue
 
-                        # Decodificar e gravar
                         dest = item_dir / safe_name
                         try:
                             pdf_bytes = decode_pdf_bytes(arquivo)
@@ -275,13 +293,15 @@ def extract_pdfs() -> None:
                             )
                             skipped_null += 1
 
-                    # Reescreve o arquivo 'contents' com todos os arquivos gravados
                     if contents_lines:
                         contents_path = item_dir / "contents"
                         contents_path.write_text("\n".join(contents_lines) + "\n", encoding="utf-8")
 
                 processed_total += len(chunk)
                 del rows
+
+        # Executa limpeza em itens da pasta SAF que não possuem arquivos no disco
+        cleanup_orphaned_contents(SAF_BUNDLE_DIR)
 
         # Summary
         logger.info("=" * 60)

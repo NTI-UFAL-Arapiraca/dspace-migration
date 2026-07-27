@@ -149,8 +149,8 @@ def process_data(input_csv, output_csv, embargo_csv, saf_bundle_dir):
         with open(os.path.join(item_dir, 'dublin_core.xml'), 'w', encoding='utf-8') as f:
             f.write(pretty_xml)
             
-        with open(os.path.join(item_dir, 'contents'), 'w', encoding='utf-8') as f:
-            f.write("documento.pdf\n")
+        # O arquivo 'contents' é gerado exclusivamente pelo script extract_pdfs.py 
+        # para garantir que apenas itens com PDFs reais possuam bitstreams listados.
             
     print("Geração do pacote SAF concluída com sucesso.")
 
