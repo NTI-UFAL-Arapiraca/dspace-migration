@@ -8,13 +8,17 @@ Este projeto automatiza o processo de extração, limpeza, transformação de me
 
 A base de origem é composta por cerca de 40.000 registros mantidos pela Biblioteca Universitária. A migração foi dividida em duas grandes etapas automatizadas:
 1. **Higienização de Metadados e Estruturação SAF**: Limpeza de HTML, padronização de datas, triagem de observações vs citações e geração dos arquivos de metadados XML (`dublin_core.xml`).
-2. **Extração Otimizada de PDFs Binários**: Busca e gravação física dos arquivos PDFs (armazenados como `bytea` no PostgreSQL) nas respetivas pastas SAF de cada item.
+2. **Extração Otimizada de PDFs Binários**: Busca e gravação física dos arquivos PDFs (armazenados como `bytea` no PostgreSQL) nas respetivas pastas SAF de cada item, com suporte completo a múltiplos anexos.
 
 ---
 
 ## 📁 Estrutura de Arquivos e Suas Funções
 
 ### Arquivos de Código e Configuração (Versionados no Git)
+
+- **[`register_custom_fields.sh`](file:///home/danilo/dev/dspace-migration/register_custom_fields.sh)**
+  - Script Bash automatizado para cadastro idempotente de campos de metadados customizados/não padrão no `metadatafieldregistry` do banco de dados PostgreSQL do DSpace (`dspacedb`).
+  - Garante que a CLI do DSpace não falhe com erros de `bad_dublin_core`.
 
 - **[`process_migration_data.py`](file:///home/danilo/dev/dspace-migration/process_migration_data.py)**
   - Script em Python (utilizando **Pandas**) responsável pelo processamento de metadados.
@@ -29,7 +33,7 @@ A base de origem é composta por cerca de 40.000 registros mantidos pela Bibliot
 - **[`extract_pdfs.py`](file:///home/danilo/dev/dspace-migration/extract_pdfs.py)**
   - Script em Python utilizando `psycopg2` para extração dos arquivos binários (`bytea`) da tabela `ud_biblioteca_anexo`.
   - **Destaque de Performance & Memória**: Utiliza **paginação por lote de IDs (chunking)**. Busca apenas os IDs inteiros em uma primeira consulta leve e realiza queries pontuais por lote (parâmetro `BATCH_SIZE`), evitando estourar a memória RAM do container Docker do PostgreSQL e da máquina host.
-  - Grava cada arquivo em `saf_bundle/item_[publicacao_id]/documento.pdf`.
+  - **Múltiplos Anexos**: Suporta itens com mais de um PDF/anexo, sanitizando os nomes originais e reescrevendo o arquivo `contents` de cada item.
 
 - **[`compose.yml`](file:///home/danilo/dev/dspace-migration/compose.yml)**
   - Arquivo do Docker Compose para subir o container PostgreSQL local contendo a base legada `biblioteca`.
@@ -64,7 +68,7 @@ A base de origem é composta por cerca de 40.000 registros mantidos pela Bibliot
     saf_bundle/
     ├── item_930/
     │   ├── dublin_core.xml   # Metadados no formato XML do DSpace
-    │   ├── contents          # Arquivo de mapeamento contendo "documento.pdf"
+    │   ├── contents          # Arquivo de mapeamento contendo os nomes dos PDFs
     │   └── documento.pdf     # Arquivo PDF binário extraído do banco
     ├── item_5312/
     │   ├── dublin_core.xml
@@ -92,25 +96,34 @@ cp .env.example .env
 docker compose up -d
 ```
 
-### 3. Fazer a Limpeza de Metadados e Gerar a Estrutura SAF
+### 3. Registrar Campos Customizados no DSpace
+
+Antes de importar o pacote SAF no DSpace, registre os campos de metadados adicionais no banco do DSpace (`dspacedb`):
+
+```bash
+chmod +x register_custom_fields.sh
+./register_custom_fields.sh dspacedb
+```
+
+### 4. Fazer a Limpeza de Metadados e Gerar a Estrutura SAF
 
 ```bash
 uv run python process_migration_data.py
 ```
 *Este comando processará o `data.csv`, gerando o `processed_data.csv`, o `embargoed_items.csv` e criando a estrutura de pastas em `saf_bundle/`.*
 
-### 4. Extrair os Arquivos PDF Binários
+### 5. Extrair os Arquivos PDF Binários
 
 ```bash
 uv run python extract_pdfs.py
 ```
-*Este comando consultará o PostgreSQL em lotes pequenos e gravará cada `documento.pdf` dentro da pasta correspondente em `saf_bundle/`.*
+*Este comando consultará o PostgreSQL em lotes pequenos e gravará cada anexo PDF dentro da pasta correspondente em `saf_bundle/`.*
 
 ---
 
 ## 📥 Importação Final no DSpace
 
-Com o pacote `saf_bundle/` completo (contendo o `dublin_core.xml`, `contents` e `documento.pdf` por item), execute a CLI nativa de importação em lote do seu servidor DSpace:
+Com o pacote `saf_bundle/` completo (contendo o `dublin_core.xml`, `contents` e os arquivos PDFs por item), execute a CLI nativa de importação em lote do seu servidor DSpace:
 
 ```bash
 /dspace/bin/dspace import \
