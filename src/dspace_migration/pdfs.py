@@ -2,7 +2,9 @@ import base64
 import logging
 import os
 import re
+import subprocess
 import sys
+import tempfile
 from collections import defaultdict
 from pathlib import Path
 
@@ -101,6 +103,51 @@ def decode_pdf_bytes(raw_data) -> bytes:
         pass
 
     return data
+
+
+def convert_to_pdfa(pdf_bytes: bytes) -> bytes:
+    """Converte os bytes de um PDF para o formato PDF/A usando Ghostscript (gs).
+    Retorna os bytes do PDF/A ou os bytes originais em caso de falha.
+    """
+    if not pdf_bytes or not pdf_bytes.startswith(b"%PDF-"):
+        return pdf_bytes
+
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_in, \
+         tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_out:
+        tmp_in_path = Path(tmp_in.name)
+        tmp_out_path = Path(tmp_out.name)
+        tmp_in.write(pdf_bytes)
+
+    try:
+        cmd = [
+            "gs",
+            "-dPDFA=2",
+            "-dBATCH",
+            "-dNOPAUSE",
+            "-dNOOUTERSAVE",
+            "-sProcessColorModel=DeviceRGB",
+            "-sDEVICE=pdfwrite",
+            "-sPDFACompatibilityPolicy=1",
+            f"-sOutputFile={tmp_out_path}",
+            str(tmp_in_path),
+        ]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode == 0 and tmp_out_path.exists() and tmp_out_path.stat().st_size > 0:
+            return tmp_out_path.read_bytes()
+        else:
+            logger.warning(
+                "Conversão para PDF/A falhou (código %d). Mantendo PDF original.",
+                result.returncode,
+            )
+            return pdf_bytes
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Erro ao executar conversão PDF/A via Ghostscript: %s", exc)
+        return pdf_bytes
+    finally:
+        if tmp_in_path.exists():
+            tmp_in_path.unlink()
+        if tmp_out_path.exists():
+            tmp_out_path.unlink()
 
 
 def cleanup_orphaned_contents(saf_bundle_dir: Path) -> None:
@@ -263,11 +310,14 @@ def extract_pdfs() -> None:
                                 skipped_null += 1
                                 continue
 
+                            # Converte o PDF para o padrão PDF/A antes de salvar
+                            pdf_bytes = convert_to_pdfa(pdf_bytes)
+
                             dest.write_bytes(pdf_bytes)
                             contents_lines.append(safe_name)
                             written += 1
                             logger.debug(
-                                "PDF gravado: %s (%d bytes)", dest, len(pdf_bytes)
+                                "PDF (PDF/A) gravado: %s (%d bytes)", dest, len(pdf_bytes)
                             )
                         except Exception as exc:  # noqa: BLE001
                             logger.warning(
@@ -288,7 +338,7 @@ def extract_pdfs() -> None:
         cleanup_orphaned_contents(SAF_BUNDLE_DIR)
 
         logger.info("=" * 60)
-        logger.info("Extração de PDFs concluída com sucesso!")
+        logger.info("Extração de PDFs (PDF/A) concluída com sucesso!")
         logger.info("  ✔ Arquivos gravados com sucesso     : %d", written)
         logger.info("  📎 Publicações com múltiplos anexos : %d", multi_attachment_pubs)
         logger.info("  ✘ Pastas inexistentes               : %d", skipped_nodir)
