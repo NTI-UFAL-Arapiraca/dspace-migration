@@ -14,125 +14,48 @@ A base de origem é composta por cerca de 40.000 registros mantidos pela Bibliot
 
 ## 📁 Estrutura de Arquivos e Suas Funções
 
-### Arquivos de Código e Configuração (Versionados no Git)
+### Arquivos de Código, Configuração e Scripts (`scripts/`)
 
-- **[`register_custom_fields.sh`](file:///home/danilo/dev/dspace-migration/register_custom_fields.sh)**
-  - Script Bash automatizado para cadastro idempotente de campos de metadados customizados/não padrão no `metadatafieldregistry` do banco de dados PostgreSQL do DSpace (`dspacedb`).
+- **[`scripts/register_custom_fields.sh`](file:///home/danibond/dev/dspace-migration/scripts/register_custom_fields.sh)**
+  - Script Bash automatizado para cadastro idempotente de campos de metadados customizados/não padrão (`dc.description.degree`, `dc.description.note`, `dc.contributor.coadvisor`, etc.) no `metadatafieldregistry` do banco de dados PostgreSQL do DSpace (`dspacedb`).
   - Garante que a CLI do DSpace não falhe com erros de `bad_dublin_core`.
 
-- **[`process_migration_data.py`](file:///home/danilo/dev/dspace-migration/process_migration_data.py)**
-  - Script em Python (utilizando **Pandas**) responsável pelo processamento de metadados.
+- **[`scripts/init-db.sh`](file:///home/danibond/dev/dspace-migration/scripts/init-db.sh)**
+  - Script Bash para subir o container PostgreSQL da base legada e restaurar os dumps em `/dumps`.
+
+- **[`process_migration_data.py`](file:///home/danibond/dev/dspace-migration/process_migration_data.py)**
+  - Script em Python (utilizando **Pandas**) responsável pelo processamento de metadados diretamente a partir do PostgreSQL (usando `sql/extract_csv.sql`).
   - **Funções principais**:
     - Remove tags HTML indesejadas de textos ricos via Expressões Regulares (preservando tags de formatação científica como `<i>` e `</i>`).
     - Limpa lixo de preenchimento ("Abstract") da coluna `dc.title.alternative`.
     - Normaliza datas para a norma ISO 8601 (`AAAA-01-01`).
     - Executa a triagem heurística entre **Notas de Acervo Físico** (`dc.description.note`) e **Citações/Referências Bibliográficas** (`dc.identifier.citation`).
-    - Filtra e exporta a lista de itens com restrição/embargo de acesso.
-    - Constrói o esqueleto das pastas em `saf_bundle/item_[id]/` contendo o `dublin_core.xml` e o ponteiro `contents`. Preserva delimitadores de valores múltiplos (`||`).
+    - Filtra e exporta a lista de itens com restrição/embargo de acesso (`embargoed_items.csv`).
+    - Constrói o esqueleto das pastas em `saf_bundle/item_[id]/` contendo o `dublin_core.xml`. Preserva delimitadores de valores múltiplos (`||`).
 
-- **[`extract_pdfs.py`](file:///home/danilo/dev/dspace-migration/extract_pdfs.py)**
+- **[`extract_pdfs.py`](file:///home/danibond/dev/dspace-migration/extract_pdfs.py)**
   - Script em Python utilizando `psycopg2` para extração dos arquivos binários (`bytea`) da tabela `ud_biblioteca_anexo`.
   - **Destaque de Performance & Memória**: Utiliza **paginação por lote de IDs (chunking)**. Busca apenas os IDs inteiros em uma primeira consulta leve e realiza queries pontuais por lote (parâmetro `BATCH_SIZE`), evitando estourar a memória RAM do container Docker do PostgreSQL e da máquina host.
   - **Múltiplos Anexos**: Suporta itens com mais de um PDF/anexo, sanitizando os nomes originais e reescrevendo o arquivo `contents` de cada item.
 
-- **[`compose.yml`](file:///home/danilo/dev/dspace-migration/compose.yml)**
+- **[`biblioteca-compose.yml`](file:///home/danibond/dev/dspace-migration/biblioteca-compose.yml)**
   - Arquivo do Docker Compose para subir o container PostgreSQL local contendo a base legada `biblioteca`.
-  - Mapeia credenciais e portas dinamicamente através do arquivo de ambiente `.env`.
 
-- **[`.env.example`](file:///home/danilo/dev/dspace-migration/.env.example)**
-  - Modelo de variáveis de ambiente para conexão ao banco de dados (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`) e configurações do lote (`BATCH_SIZE`, `SAF_BUNDLE_DIR`).
+- **[`dspace-docker/`](file:///home/danibond/dev/dspace-migration/dspace-docker)**
+  - Diretório contendo a configuração Docker do repositório DSpace para testes locais e execução dos containers (`dspace`, `dspacedb`, `dspace-ui`).
 
-- **[`pyproject.toml`](file:///home/danilo/dev/dspace-migration/pyproject.toml) e [`uv.lock`](file:///home/danilo/dev/dspace-migration/uv.lock)**
-  - Configurações do ambiente de desenvolvimento e gerenciamento de dependências (`pandas`, `psycopg2-binary`, `python-dotenv`) gerenciados via **`uv`**.
-
-- **[`mise.toml`](file:///home/danilo/dev/dspace-migration/mise.toml)**
-  - Configuração do gerenciador de runtime local (Mise).
-
-- **[`.gitignore`](file:///home/danilo/dev/dspace-migration/.gitignore)**
-  - Garante que dados legados brutos, CSVs intermediários e o pacote gerado com milhares de PDFs permaneçam exclusivamente na máquina local e não sejam enviados ao repositório Git.
-
----
-
-### Arquivos de Dados e Saídas Geradas (Mantidos no Dispositivo Local)
-
-- **`data.csv`**
-  - Dump brutos de metadados extraídos do PostgreSQL de origem.
-- **`processed_data.csv`**
-  - CSV limpo e totalmente padronizado com as tags Qualified Dublin Core prontas.
-- **`embargoed_items.csv`**
-  - Relatório contendo os registros identificados com restrição de acesso e datas limite de embargo para aplicação de políticas de bloqueio no DSpace.
-- **`saf_bundle/`**
-  - Diretório raiz no formato **Simple Archive Format (SAF)** do DSpace.
-  - **Estrutura interna**:
-    ```text
-    saf_bundle/
-    ├── item_930/
-    │   ├── dublin_core.xml   # Metadados no formato XML do DSpace
-    │   ├── contents          # Arquivo de mapeamento contendo os nomes dos PDFs
-    │   └── documento.pdf     # Arquivo PDF binário extraído do banco
-    ├── item_5312/
-    │   ├── dublin_core.xml
-    │   ├── contents
-    │   └── documento.pdf
-    └── ...
-    ```
+- **[`docs/`](file:///home/danibond/dev/dspace-migration/docs)**
+  - Documentação detalhada e passo a passo da migração dividida em etapas numeradas (`0_campos_a_migrar.md`, `1_extracao_saf.md`, `2_configuracao_dspace.md`, `3_importacao_dspace.md`).
 
 ---
 
 ## 🚀 Como Executar o Pipeline
 
-### 1. Configurar o Ambiente de Desenvolvimento
+Consulte o guia completo passo a passo na pasta [`docs/`](file:///home/danibond/dev/dspace-migration/docs):
 
-Certifique-se de ter o `uv` instalado no ambiente e crie seu arquivo `.env`:
-
-```bash
-cp .env.example .env
-# Edite o .env se necessário para ajustar senhas ou portas de banco de dados
-```
-
-### 2. Subir o Banco PostgreSQL Legado (Se Aplicável)
-
-```bash
-docker compose up -d
-```
-
-### 3. Registrar Campos Customizados no DSpace
-
-Antes de importar o pacote SAF no DSpace, registre os campos de metadados adicionais no banco do DSpace (`dspacedb`):
-
-```bash
-chmod +x register_custom_fields.sh
-./register_custom_fields.sh dspacedb
-```
-
-### 4. Fazer a Limpeza de Metadados e Gerar a Estrutura SAF
-
-```bash
-uv run python process_migration_data.py
-```
-*Este comando conectará ao PostgreSQL executando a consulta de `sql/extract_csv.sql` (ou `docs/extract_csv.sql`), gerando o `processed_data.csv`, o `embargoed_items.csv` e criando a estrutura de pastas em `saf_bundle/`.*
-
-### 5. Extrair os Arquivos PDF Binários
-
-```bash
-uv run python extract_pdfs.py
-```
-*Este comando consultará o PostgreSQL em lotes pequenos e gravará cada anexo PDF dentro da pasta correspondente em `saf_bundle/`.*
-
----
-
-## 📥 Importação Final no DSpace
-
-Com o pacote `saf_bundle/` completo (contendo o `dublin_core.xml`, `contents` e os arquivos PDFs por item), execute a CLI nativa de importação em lote do seu servidor DSpace:
-
-```bash
-/dspace/bin/dspace import \
-  --add \
-  --eperson=admin@sua-instituicao.edu.br \
-  --collection=HANDLE_DA_COLECAO \
-  --source=/caminho/para/saf_bundle \
-  --mapfile=mapfile_migration
-```
+1. **[Etapa 1: Extração e Geração do Pacote SAF](file:///home/danibond/dev/dspace-migration/docs/1_extracao_saf.md)**
+2. **[Etapa 2: Configuração e Preparação do DSpace](file:///home/danibond/dev/dspace-migration/docs/2_configuracao_dspace.md)**
+3. **[Etapa 3: Importação Final no DSpace](file:///home/danibond/dev/dspace-migration/docs/3_importacao_dspace.md)**
 
 ---
 

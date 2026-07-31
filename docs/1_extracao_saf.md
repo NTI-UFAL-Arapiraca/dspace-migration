@@ -11,11 +11,12 @@ Esta etapa descreve como extrair os metadados e os arquivos PDF do banco de dado
 cp .env.example .env
 ```
 
-3. Suba o container do PostgreSQL legado (se estiver rodando localmente para testes):
+3. Suba o container do PostgreSQL legado (se estiver rodando localmente a partir de `biblioteca-compose.yml`):
 
 ```bash
-docker compose up -d
+docker compose -f biblioteca-compose.yml up -d
 ```
+*(Ou execute o script `./scripts/init-db.sh` caso vá restaurar os dumps).*
 
 ## 2. Processamento dos Metadados
 
