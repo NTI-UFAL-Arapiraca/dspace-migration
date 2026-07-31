@@ -3,7 +3,7 @@ SELECT
     p.id AS "id_origem",
 
     -- Metadados básicos de identificação
-    p.name AS "	",
+    p.name AS "dc.title",
     p.titulo_abstract AS "dc.title.alternative",
     p.resumo AS "dc.description.abstract[pt_BR]",
     p.abstract AS "dc.description.abstract[en]",
