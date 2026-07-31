@@ -17,6 +17,7 @@ DB_PORT = os.getenv("DB_PORT", "5440")
 DB_NAME = os.getenv("DB_NAME", "biblioteca")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
+SAF_BUNDLE_DIR = os.getenv("SAF_BUNDLE_DIR", "saf_bundle")
 
 
 def connect_db():
@@ -152,8 +153,8 @@ def process_data(
     print(f"Exportados {len(embargo_output)} itens embargados para {embargo_csv}")
 
     # 6. Exportação do processed_data.csv
-    print(f"Exportando dados processados para {output_csv}...")
-    df.to_csv(output_csv, index=False)
+    # print(f"Exportando dados processados para {output_csv}...")
+    # df.to_csv(output_csv, index=False)
 
     # 7. Geração da Estrutura SAF
     print("Gerando estrutura SAF (Simple Archive Format)...")
@@ -221,5 +222,5 @@ if __name__ == '__main__':
         sql_file='sql/extract_csv.sql',
         output_csv='processed_data.csv',
         embargo_csv='embargoed_items.csv',
-        saf_bundle_dir='saf_bundle',
+        saf_bundle_dir=SAF_BUNDLE_DIR,
     )
