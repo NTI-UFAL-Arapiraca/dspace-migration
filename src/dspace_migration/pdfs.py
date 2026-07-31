@@ -1,4 +1,5 @@
 import base64
+import csv
 import logging
 import os
 import re
@@ -105,12 +106,12 @@ def decode_pdf_bytes(raw_data) -> bytes:
     return data
 
 
-def convert_to_pdfa(pdf_bytes: bytes) -> bytes:
+def convert_to_pdfa(pdf_bytes: bytes) -> tuple[bytes, bool, str]:
     """Converte os bytes de um PDF para o formato PDF/A usando Ghostscript (gs).
-    Retorna os bytes do PDF/A ou os bytes originais em caso de falha.
+    Retorna a tupla (bytes_finais, sucesso_pdfa, mensagem_erro).
     """
     if not pdf_bytes or not pdf_bytes.startswith(b"%PDF-"):
-        return pdf_bytes
+        return pdf_bytes, False, "Conteúdo binário não possui cabeçalho PDF válido (%PDF-)"
 
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_in, \
          tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_out:
@@ -133,16 +134,12 @@ def convert_to_pdfa(pdf_bytes: bytes) -> bytes:
         ]
         result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if result.returncode == 0 and tmp_out_path.exists() and tmp_out_path.stat().st_size > 0:
-            return tmp_out_path.read_bytes()
+            return tmp_out_path.read_bytes(), True, ""
         else:
-            logger.warning(
-                "Conversão para PDF/A falhou (código %d). Mantendo PDF original.",
-                result.returncode,
-            )
-            return pdf_bytes
+            err_msg = result.stderr.decode("utf-8", errors="ignore").strip() or f"Código de saída Ghostscript: {result.returncode}"
+            return pdf_bytes, False, err_msg
     except Exception as exc:  # noqa: BLE001
-        logger.warning("Erro ao executar conversão PDF/A via Ghostscript: %s", exc)
-        return pdf_bytes
+        return pdf_bytes, False, str(exc)
     finally:
         if tmp_in_path.exists():
             tmp_in_path.unlink()
@@ -200,6 +197,8 @@ def extract_pdfs() -> None:
     conn = connect()
     logger.info("Conexão estabelecida com sucesso.")
 
+    issues_log = []
+
     try:
         with conn.cursor() as cur:
             logger.info("Buscando lista de IDs únicos a processar...")
@@ -227,6 +226,7 @@ def extract_pdfs() -> None:
         written         = 0
         skipped_null    = 0
         skipped_nodir   = 0
+        pdfa_failures   = 0
         processed_total = 0
         multi_attachment_pubs = 0
 
@@ -262,6 +262,14 @@ def extract_pdfs() -> None:
                             item_dir,
                         )
                         skipped_nodir += 1
+                        issues_log.append({
+                            "publicacao_id": publicacao_id,
+                            "anexo_id": "-",
+                            "filename": "-",
+                            "issue_type": "MISSING_SAF_DIRECTORY",
+                            "details": f"Diretório SAF '{item_dir}' não existe no disco",
+                            "action_taken": "Anexo ignorado",
+                        })
                         continue
 
                     attachments = pub_attachments.get(publicacao_id, [])
@@ -272,6 +280,14 @@ def extract_pdfs() -> None:
                             publicacao_id,
                         )
                         skipped_null += 1
+                        issues_log.append({
+                            "publicacao_id": publicacao_id,
+                            "anexo_id": "-",
+                            "filename": "-",
+                            "issue_type": "NO_ATTACHMENT_RECORD",
+                            "details": "Nenhum anexo foi encontrado no banco para esta publicação",
+                            "action_taken": "Ignorado",
+                        })
                         continue
 
                     if len(attachments) > 1:
@@ -296,6 +312,14 @@ def extract_pdfs() -> None:
                                 raw_name,
                             )
                             skipped_null += 1
+                            issues_log.append({
+                                "publicacao_id": publicacao_id,
+                                "anexo_id": anexo_id,
+                                "filename": safe_name,
+                                "issue_type": "NULL_BINARY",
+                                "details": "Campo binário 'arquivo' está nulo no PostgreSQL",
+                                "action_taken": "Ignorado",
+                            })
                             continue
 
                         dest = item_dir / safe_name
@@ -308,16 +332,41 @@ def extract_pdfs() -> None:
                                     anexo_id,
                                 )
                                 skipped_null += 1
+                                issues_log.append({
+                                    "publicacao_id": publicacao_id,
+                                    "anexo_id": anexo_id,
+                                    "filename": safe_name,
+                                    "issue_type": "CORRUPT_DECODE_FAILURE",
+                                    "details": "Falha ao decodificar bytes do PDF (formato irreconhecível)",
+                                    "action_taken": "Ignorado",
+                                })
                                 continue
 
-                            # Converte o PDF para o padrão PDF/A antes de salvar
-                            pdf_bytes = convert_to_pdfa(pdf_bytes)
+                            # Tenta converter para PDF/A
+                            final_bytes, converted_ok, err_msg = convert_to_pdfa(pdf_bytes)
+                            if not converted_ok:
+                                pdfa_failures += 1
+                                logger.warning(
+                                    "ATENÇÃO: Conversão PDF/A falhou em publicacao_id=%s (anexo_id=%s, %s): %s. Salvando PDF original.",
+                                    publicacao_id,
+                                    anexo_id,
+                                    safe_name,
+                                    err_msg,
+                                )
+                                issues_log.append({
+                                    "publicacao_id": publicacao_id,
+                                    "anexo_id": anexo_id,
+                                    "filename": safe_name,
+                                    "issue_type": "PDFA_CONVERSION_FAILED",
+                                    "details": err_msg,
+                                    "action_taken": "Salvo PDF original (sem conformidade PDF/A)",
+                                })
 
-                            dest.write_bytes(pdf_bytes)
+                            dest.write_bytes(final_bytes)
                             contents_lines.append(safe_name)
                             written += 1
                             logger.debug(
-                                "PDF (PDF/A) gravado: %s (%d bytes)", dest, len(pdf_bytes)
+                                "PDF gravado: %s (%d bytes)", dest, len(final_bytes)
                             )
                         except Exception as exc:  # noqa: BLE001
                             logger.warning(
@@ -327,6 +376,14 @@ def extract_pdfs() -> None:
                                 exc,
                             )
                             skipped_null += 1
+                            issues_log.append({
+                                "publicacao_id": publicacao_id,
+                                "anexo_id": anexo_id,
+                                "filename": safe_name,
+                                "issue_type": "WRITE_FAILED",
+                                "details": str(exc),
+                                "action_taken": "Ignorado",
+                            })
 
                     if contents_lines:
                         contents_path = item_dir / "contents"
@@ -337,13 +394,39 @@ def extract_pdfs() -> None:
 
         cleanup_orphaned_contents(SAF_BUNDLE_DIR)
 
-        logger.info("=" * 60)
-        logger.info("Extração de PDFs (PDF/A) concluída com sucesso!")
-        logger.info("  ✔ Arquivos gravados com sucesso     : %d", written)
-        logger.info("  📎 Publicações com múltiplos anexos : %d", multi_attachment_pubs)
-        logger.info("  ✘ Pastas inexistentes               : %d", skipped_nodir)
-        logger.info("  ⚠ Binários nulos/corrompidos        : %d", skipped_null)
-        logger.info("=" * 60)
+        # Grava relatório de anomalias/erros se houver
+        issues_csv_path = Path("pdf_extraction_issues.csv")
+        if issues_log:
+            with open(issues_csv_path, "w", encoding="utf-8", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "publicacao_id",
+                        "anexo_id",
+                        "filename",
+                        "issue_type",
+                        "details",
+                        "action_taken",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerows(issues_log)
+
+        logger.info("=" * 70)
+        logger.info("  RESUMO DA EXTRAÇÃO DE PDFS")
+        logger.info("=" * 70)
+        logger.info("  ✔ Arquivos gravados com sucesso        : %d", written)
+        logger.info("  📎 Publicações com múltiplos anexos    : %d", multi_attachment_pubs)
+        logger.info("  ⚠️  Falhas de conversão PDF/A (original): %d", pdfa_failures)
+        logger.info("  ✘ Pastas SAF inexistentes              : %d", skipped_nodir)
+        logger.info("  ⚠ Binários nulos ou corrompidos       : %d", skipped_null)
+        logger.info("=" * 70)
+
+        if issues_log:
+            logger.warning("=" * 70)
+            logger.warning("  ⚠️  ATENÇÃO: FORAM ENCONTRADAS %d ANOMALIAS/ALERTAS!", len(issues_log))
+            logger.warning("  Relatório detalhado exportado para: %s", issues_csv_path.resolve())
+            logger.warning("=" * 70)
 
     finally:
         conn.close()
