@@ -110,7 +110,7 @@ chmod +x register_custom_fields.sh
 ```bash
 uv run python process_migration_data.py
 ```
-*Este comando processará o `data.csv`, gerando o `processed_data.csv`, o `embargoed_items.csv` e criando a estrutura de pastas em `saf_bundle/`.*
+*Este comando conectará ao PostgreSQL executando a consulta de `sql/extract_csv.sql` (ou `docs/extract_csv.sql`), gerando o `processed_data.csv`, o `embargoed_items.csv` e criando a estrutura de pastas em `saf_bundle/`.*
 
 ### 5. Extrair os Arquivos PDF Binários
 
