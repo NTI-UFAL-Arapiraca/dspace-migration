@@ -12,40 +12,29 @@ A base de origem é composta por cerca de 40.000 registros mantidos pela Bibliot
 
 ---
 
-## 📁 Estrutura de Arquivos e Suas Funções
+## 📦 Estrutura do Pacote e Comandos CLI (`uv`)
 
-### Arquivos de Código, Configuração e Scripts (`scripts/`)
+O projeto é empacotado via **`uv`** com código estruturado em `src/dspace_migration/`.
 
-- **[`scripts/register_custom_fields.sh`](scripts/register_custom_fields.sh)**
-  - Script Bash automatizado para cadastro idempotente de campos de metadados customizados/não padrão (`dc.description.degree`, `dc.description.note`, `dc.contributor.coadvisor`, etc.) no `metadatafieldregistry` do banco de dados PostgreSQL do DSpace (`dspacedb`).
-  - Garante que a CLI do DSpace não falhe com erros de `bad_dublin_core`.
+### Comandos CLI Disponíveis:
 
-- **[`scripts/init-db.sh`](scripts/init-db.sh)**
-  - Script Bash para subir o container PostgreSQL da base legada e restaurar os dumps em `/dumps`.
+| Comando | Descrição |
+| --- | --- |
+| `uv run extract-metadata` | Conecta ao PostgreSQL legado, executa `sql/extract_metadata.sql`, higieniza os metadados e gera a estrutura SAF (`saf_bundle/item_[id]/dublin_core.xml`). |
+| `uv run extract-pdfs` | Busca os PDFs binários (`bytea`) em lotes no PostgreSQL e salva os arquivos nas pastas correspondentes do SAF com o arquivo `contents`. |
+| `uv run migrate` | Executa o pipeline completo (metadados + PDFs) em sequência. |
 
-- **[`process_migration_data.py`](process_migration_data.py)**
-  - Script em Python (utilizando **Pandas**) responsável pelo processamento de metadados diretamente a partir do PostgreSQL (usando `sql/extract_metadata.sql`).
-  - **Funções principais**:
-    - Remove tags HTML indesejadas de textos ricos via Expressões Regulares (preservando tags de formatação científica como `<i>` e `</i>`).
-    - Limpa lixo de preenchimento ("Abstract") da coluna `dc.title.alternative`.
-    - Normaliza datas para a norma ISO 8601 (`AAAA-01-01`).
-    - Executa a triagem heurística entre **Notas de Acervo Físico** (`dc.description.note`) e **Citações/Referências Bibliográficas** (`dc.identifier.citation`).
-    - Filtra e exporta a lista de itens com restrição/embargo de acesso (`embargoed_items.csv`).
-    - Constrói o esqueleto das pastas em `saf_bundle/item_[id]/` contendo o `dublin_core.xml`. Preserva delimitadores de valores múltiplos (`||`).
+---
 
-- **[`extract_pdfs.py`](extract_pdfs.py)**
-  - Script em Python utilizando `psycopg2` para extração dos arquivos binários (`bytea`) da tabela `ud_biblioteca_anexo`.
-  - **Destaque de Performance & Memória**: Utiliza **paginação por lote de IDs (chunking)**. Busca apenas os IDs inteiros em uma primeira consulta leve e realiza queries pontuais por lote (parâmetro `BATCH_SIZE`), evitando estourar a memória RAM do container Docker do PostgreSQL e da máquina host.
-  - **Múltiplos Anexos**: Suporta itens com mais de um PDF/anexo, sanitizando os nomes originais e reescrevendo o arquivo `contents` de cada item.
+## 📁 Estrutura de Arquivos
 
-- **[`biblioteca-compose.yml`](biblioteca-compose.yml)**
-  - Arquivo do Docker Compose para subir o container PostgreSQL local contendo a base legada `biblioteca`.
-
-- **[`dspace-docker/`](dspace-docker/)**
-  - Diretório contendo a configuração Docker do repositório DSpace para testes locais e execução dos containers (`dspace`, `dspacedb`, `dspace-ui`).
-
-- **[`docs/`](docs/)**
-  - Documentação detalhada e passo a passo da migração dividida em etapas numeradas (`0_campos_a_migrar.md`, `1_extracao_saf.md`, `2_configuracao_dspace.md`, `3_importacao_dspace.md`).
+- **`src/dspace_migration/`**: Código-fonte do pacote Python (`metadata.py`, `pdfs.py`, `cli.py`).
+- **`sql/extract_metadata.sql`**: Consulta SQL para extração dos metadados brutos do PostgreSQL legado.
+- **[`scripts/register_custom_fields.sh`](scripts/register_custom_fields.sh)**: Script para cadastro dos campos customizados no banco do DSpace.
+- **[`scripts/init-db.sh`](scripts/init-db.sh)**: Script para subir o banco legado e carregar os dumps.
+- **[`biblioteca-compose.yml`](biblioteca-compose.yml)**: Docker Compose do banco PostgreSQL legado.
+- **[`dspace-docker/`](dspace-docker/)**: Configuração Docker da instância do DSpace.
+- **[`docs/`](docs/)**: Guia detalhado passo a passo da migração.
 
 ---
 

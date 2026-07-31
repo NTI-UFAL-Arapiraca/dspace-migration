@@ -18,4 +18,6 @@ build-backend = "hatchling.build"
 packages = ["src/dspace_migration"]
 
 [project.scripts]
-migrate = "dspace_migration.main:run_migration"
+extract-metadata = "dspace_migration.cli:run_extract_metadata"
+extract-pdfs = "dspace_migration.cli:run_extract_pdfs"
+migrate = "dspace_migration.cli:migrate_all"

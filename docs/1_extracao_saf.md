@@ -20,7 +20,7 @@ docker compose -f biblioteca-compose.yml up -d
 
 ## 2. Processamento dos Metadados
 
-O script `process_migration_data.py` é responsável por:
+O comando `extract-metadata` é responsável por:
 - Conectar ao banco de dados PostgreSQL.
 - Executar a consulta presente em `sql/extract_metadata.sql`.
 - Limpar tags HTML dos textos.
@@ -28,25 +28,33 @@ O script `process_migration_data.py` é responsável por:
 - Criar a estrutura de diretórios do pacote SAF (`saf_bundle/item_[id]/`).
 - Gerar o arquivo `dublin_core.xml` para cada item com base nos metadados extraídos.
 
-Execute o script com:
+Execute o comando:
 
 ```bash
-uv run python process_migration_data.py
+uv run extract-metadata
 ```
 
 *Os itens com restrição/embargo de acesso serão exportados para o arquivo `embargoed_items.csv` para referência.*
 
 ## 3. Extração dos Arquivos PDF Binários
 
-O script `extract_pdfs.py` extrai os anexos salvos em formato binário (`bytea`) do banco e os grava como arquivos PDF dentro da pasta de cada item no pacote SAF.
+O comando `extract-pdfs` extrai os anexos salvos em formato binário (`bytea`) do banco e os grava como arquivos PDF dentro da pasta de cada item no pacote SAF.
 
-Execute o script com:
+Execute o comando:
 
 ```bash
-uv run python extract_pdfs.py
+uv run extract-pdfs
 ```
 
 *O script suporta paginação para não estourar a memória (configurável via `BATCH_SIZE` no `.env`) e gerencia adequadamente publicações com múltiplos anexos, criando/atualizando o arquivo `contents` do SAF automaticamente.*
+
+## 4. Executando Ambos em Sequência
+
+Caso deseje rodar a extração completa de metadados e PDFs em um único comando, utilize:
+
+```bash
+uv run migrate
+```
 
 ## Resultado
 

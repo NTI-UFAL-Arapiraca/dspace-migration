@@ -3,13 +3,11 @@ import re
 import sys
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
+from pathlib import Path
 import pandas as pd
 import psycopg2
 from dotenv import load_dotenv
 
-# ---------------------------------------------------------------------------
-# Configurações de Conexão com o Banco de Dados (variáveis em .env)
-# ---------------------------------------------------------------------------
 load_dotenv()
 
 DB_HOST = os.getenv("DB_HOST", "localhost")
@@ -18,6 +16,12 @@ DB_NAME = os.getenv("DB_NAME", "biblioteca")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
 SAF_BUNDLE_DIR = os.getenv("SAF_BUNDLE_DIR", "saf_bundle")
+
+DEFAULT_SQL_FILE = Path("sql/extract_metadata.sql")
+if not DEFAULT_SQL_FILE.exists():
+    # Fallback to path relative to project root
+    project_root = Path(__file__).resolve().parent.parent.parent
+    DEFAULT_SQL_FILE = project_root / "sql" / "extract_metadata.sql"
 
 
 def connect_db():
@@ -33,8 +37,9 @@ def connect_db():
 
 def fetch_data_from_db(sql_file):
     """Lê a consulta SQL de um arquivo e executa no PostgreSQL retornando um DataFrame Pandas."""
-    print(f"Lendo consulta SQL de: {sql_file}")
-    with open(sql_file, "r", encoding="utf-8") as f:
+    sql_path = Path(sql_file)
+    print(f"Lendo consulta SQL de: {sql_path}")
+    with open(sql_path, "r", encoding="utf-8") as f:
         sql_query = f.read()
 
     print(f"Conectando ao banco de dados {DB_NAME} em {DB_HOST}:{DB_PORT}...")
@@ -47,16 +52,20 @@ def fetch_data_from_db(sql_file):
 
 
 def process_data(
-    sql_file="sql/extract_metadata.sql",
+    sql_file=None,
     embargo_csv="embargoed_items.csv",
     saf_bundle_dir=SAF_BUNDLE_DIR,
 ):
-    print("Iniciando o processamento dos dados...")
+    if sql_file is None:
+        sql_file = DEFAULT_SQL_FILE
 
-    if not os.path.exists(sql_file):
-        raise FileNotFoundError(f"Arquivo SQL não encontrado em '{sql_file}'.")
+    print("Iniciando o processamento dos dados de metadados...")
 
-    df = fetch_data_from_db(sql_file)
+    sql_path = Path(sql_file)
+    if not sql_path.exists():
+        raise FileNotFoundError(f"Arquivo SQL não encontrado em '{sql_path}'.")
+
+    df = fetch_data_from_db(sql_path)
 
     print(f"Total de registros carregados: {df.shape[0]}")
 
@@ -199,11 +208,3 @@ def process_data(
             f.write(pretty_xml)
 
     print("Geração do pacote SAF concluída com sucesso.")
-
-
-if __name__ == '__main__':
-    process_data(
-        sql_file='sql/extract_metadata.sql',
-        embargo_csv='embargoed_items.csv',
-        saf_bundle_dir=SAF_BUNDLE_DIR,
-    )

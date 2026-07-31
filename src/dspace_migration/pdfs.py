@@ -9,9 +9,6 @@ from pathlib import Path
 import psycopg2
 from dotenv import load_dotenv
 
-# ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -21,9 +18,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------------------------
 load_dotenv()
 
 DB_HOST     = os.getenv("DB_HOST", "localhost")
@@ -34,13 +28,8 @@ DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
 
 SAF_BUNDLE_DIR = Path(os.getenv("SAF_BUNDLE_DIR", "saf_bundle"))
 BATCH_SIZE     = int(os.getenv("BATCH_SIZE", "50"))
+EXIBIR_PDF_FILTER = True
 
-# ---------------------------------------------------------------------------
-# Filter — change to "false" to extract items where exibir_pdf IS false.
-# ---------------------------------------------------------------------------
-EXIBIR_PDF_FILTER = True  # change to False to extract restricted files
-
-# 1. IDs únicos de publicações (para paginação)
 IDS_QUERY = """
     SELECT DISTINCT publicacao_id
     FROM ud_biblioteca_anexo
@@ -49,7 +38,6 @@ IDS_QUERY = """
     ORDER BY publicacao_id;
 """
 
-# 2. TODOS os anexos de cada lote de publicações, ordenados por publicacao_id e id
 BATCH_BINARY_QUERY = """
     SELECT publicacao_id, id, name, arquivo
     FROM ud_biblioteca_anexo
@@ -72,9 +60,7 @@ def sanitize_filename(name: str) -> str:
 
 
 def decode_pdf_bytes(raw_data) -> bytes:
-    """Decodifica os dados do PDF garantindo arquivo binário válido (%PDF-).
-    Trata memoryview, hex format de bytea do PostgreSQL (\\x...) e Base64 do Odoo.
-    """
+    """Decodifica os dados do PDF garantindo arquivo binário válido (%PDF-)."""
     if raw_data is None:
         return b""
 
@@ -168,7 +154,6 @@ def extract_pdfs() -> None:
     logger.info("Conexão estabelecida com sucesso.")
 
     try:
-        # 1. Lista de IDs únicos de publicações
         with conn.cursor() as cur:
             logger.info("Buscando lista de IDs únicos a processar...")
             cur.execute(IDS_QUERY, {"exibir_pdf": EXIBIR_PDF_FILTER})
@@ -300,12 +285,10 @@ def extract_pdfs() -> None:
                 processed_total += len(chunk)
                 del rows
 
-        # Executa limpeza em itens da pasta SAF que não possuem arquivos no disco
         cleanup_orphaned_contents(SAF_BUNDLE_DIR)
 
-        # Summary
         logger.info("=" * 60)
-        logger.info("Extração concluída com sucesso!")
+        logger.info("Extração de PDFs concluída com sucesso!")
         logger.info("  ✔ Arquivos gravados com sucesso     : %d", written)
         logger.info("  📎 Publicações com múltiplos anexos : %d", multi_attachment_pubs)
         logger.info("  ✘ Pastas inexistentes               : %d", skipped_nodir)
@@ -315,7 +298,3 @@ def extract_pdfs() -> None:
     finally:
         conn.close()
         logger.info("Conexão com o banco encerrada.")
-
-
-if __name__ == "__main__":
-    extract_pdfs()
