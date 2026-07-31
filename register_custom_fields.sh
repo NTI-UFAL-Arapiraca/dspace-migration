@@ -31,7 +31,9 @@ SELECT
     elem.scope_note
 FROM (
     VALUES 
+        ('description', 'degree', 'Nome do Curso ou Programa de Pós-Graduação (ex: Ciência da Computação).'),
         ('publisher', 'department', 'Departamento, Campus ou Centro de Ensino responsável pela publicação/defesa.'),
+        ('contributor', 'advisor', 'Nome do Orientador do trabalho acadêmico (Formato: Sobrenome, Nome).'),
         ('contributor', 'coadvisor', 'Nome do Coorientador do trabalho acadêmico (Formato: Sobrenome, Nome).'),
         ('contributor', 'committee', 'Membros da Banca Examinadora e avaliadores de defesa do trabalho.'),
         ('description', 'note', 'Notas sobre localização de acervo físico, observações internas ou notas gerais.'),
