@@ -43,3 +43,29 @@ Além do texto, extraia os dados de controle do arquivo físico e regras de exib
 | --- | --- | --- |
 | **Caminho/Nome do Arquivo PDF** | Coluna `filename` do SAF | O nome exato do arquivo armazenado no servidor (ex: `tcc_id_5432.pdf`). |
 | **Status de Acesso / Sigilo** | `dc.rights` ou políticas de restrição | Identificar se o trabalho é de *Acesso Aberto* ou se possui *Embargo* (restrito temporariamente por patentes ou publicação pendente). |
+
+### 5. Mapeamento de Origem dos Dados (Banco de Dados Antigo)
+
+Abaixo encontra-se a referência técnica de onde cada informação está sendo extraída no banco de dados PostgreSQL de origem (`biblioteca`).
+
+| Informação / Metadado | Tabela de Origem | Coluna(s) de Origem | Observações |
+| --- | --- | --- | --- |
+| **Título Principal** | `ud_biblioteca_publicacao` | `name` | Mapeado para `dc.title` |
+| **Título Alternativo** | `ud_biblioteca_publicacao` | `titulo_abstract` | Mapeado para `dc.title.alternative` |
+| **Resumo (pt_BR)** | `ud_biblioteca_publicacao` | `resumo` | Mapeado para `dc.description.abstract[pt_BR]` |
+| **Abstract (en)** | `ud_biblioteca_publicacao` | `abstract` | Mapeado para `dc.description.abstract[en]` |
+| **Data de Publicação** | `ud_biblioteca_publicacao` | `ano_pub` | Mapeado para `dc.date.issued` |
+| **Data de Defesa** | `ud_biblioteca_publicacao` | `data_defesa` | Mapeado para `dc.date.submitted` |
+| **Número de Páginas** | `ud_biblioteca_publicacao` | `numero_paginas` | Mapeado para `dc.format.extent` |
+| **Observações / Citações** | `ud_biblioteca_publicacao` | `observacoes` | Extraído para notas ou citações |
+| **Controle de Acesso** | `ud_biblioteca_publicacao` | `data_limite_embargo`, `autorizar_publicacao` | Define se pode ser exposto publicamente |
+| **Tipo de Documento** | `ud_biblioteca_publicacao_tipo` | `name` | Mapeado para `dc.type` |
+| **Nome do Curso/Grau** | `ud_curso` | `name` | Mapeado para `dc.description.degree` |
+| **Departamento/Campus** | `ud_campus` | `name` | Mapeado para `dc.publisher.department` |
+| **Autor(es)** | `ud_biblioteca_publicacao_autor` | `ultimo_nome`, `name` | Junção N:N por `ud_biblioteca_publicacao_autores` |
+| **Orientador(es)** | `ud_biblioteca_publicacao_orientador` | `ultimo_nome`, `name` | Junção N:N por `publicacao_orientador_rel` |
+| **Coorientador(es)** | `ud_biblioteca_publicacao_orientador` | `ultimo_nome`, `name` | Junção N:N por `publicacao_coorientador_rel` |
+| **Palavras-chave** | `ud_biblioteca_p_chave` | `name` | Junção N:N por `publicacao_p_chave_rel` |
+| **Arquivo PDF (Binário)** | `ud_biblioteca_anexo` | `arquivo` | Processado por `pdfs.py` e convertido a PDF/A |
+| **Nome do Arquivo PDF** | `ud_biblioteca_anexo` | `name` | Utilizado para nomear o arquivo físico |
+| **Exibir PDF (Controle)** | `ud_biblioteca_anexo` | `exibir_pdf` | Define se o anexo deve ser importado |
