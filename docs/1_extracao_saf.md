@@ -22,7 +22,7 @@ docker compose -f biblioteca-compose.yml up -d
 
 O script `process_migration_data.py` é responsável por:
 - Conectar ao banco de dados PostgreSQL.
-- Executar a consulta presente em `sql/extract_csv.sql`.
+- Executar a consulta presente em `sql/extract_metadata.sql`.
 - Limpar tags HTML dos textos.
 - Padronizar datas para o formato ISO.
 - Criar a estrutura de diretórios do pacote SAF (`saf_bundle/item_[id]/`).

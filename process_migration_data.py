@@ -47,28 +47,16 @@ def fetch_data_from_db(sql_file):
 
 
 def process_data(
-    input_csv=None,
-    sql_file="sql/extract_csv.sql",
-    output_csv="processed_data.csv",
+    sql_file="sql/extract_metadata.sql",
     embargo_csv="embargoed_items.csv",
-    saf_bundle_dir="saf_bundle",
+    saf_bundle_dir=SAF_BUNDLE_DIR,
 ):
     print("Iniciando o processamento dos dados...")
 
-    if input_csv and os.path.exists(input_csv):
-        print(f"Carregando dados a partir do arquivo CSV de entrada: {input_csv}")
-        df = pd.read_csv(input_csv)
-    else:
-        actual_sql_file = sql_file
-        if not os.path.exists(actual_sql_file) and os.path.exists("docs/extract_csv.sql"):
-            actual_sql_file = "docs/extract_csv.sql"
+    if not os.path.exists(sql_file):
+        raise FileNotFoundError(f"Arquivo SQL não encontrado em '{sql_file}'.")
 
-        if not os.path.exists(actual_sql_file):
-            raise FileNotFoundError(
-                f"Arquivo SQL não encontrado em '{sql_file}' nem em 'docs/extract_csv.sql'."
-            )
-
-        df = fetch_data_from_db(actual_sql_file)
+    df = fetch_data_from_db(sql_file)
 
     print(f"Total de registros carregados: {df.shape[0]}")
 
@@ -152,11 +140,7 @@ def process_data(
     embargo_output.to_csv(embargo_csv, index=False)
     print(f"Exportados {len(embargo_output)} itens embargados para {embargo_csv}")
 
-    # 6. Exportação do processed_data.csv
-    # print(f"Exportando dados processados para {output_csv}...")
-    # df.to_csv(output_csv, index=False)
-
-    # 7. Geração da Estrutura SAF
+    # 6. Geração da Estrutura SAF
     print("Gerando estrutura SAF (Simple Archive Format)...")
     os.makedirs(saf_bundle_dir, exist_ok=True)
 
@@ -219,8 +203,7 @@ def process_data(
 
 if __name__ == '__main__':
     process_data(
-        sql_file='sql/extract_csv.sql',
-        output_csv='processed_data.csv',
+        sql_file='sql/extract_metadata.sql',
         embargo_csv='embargoed_items.csv',
         saf_bundle_dir=SAF_BUNDLE_DIR,
     )

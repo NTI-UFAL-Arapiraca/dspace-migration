@@ -24,7 +24,7 @@ A base de origem é composta por cerca de 40.000 registros mantidos pela Bibliot
   - Script Bash para subir o container PostgreSQL da base legada e restaurar os dumps em `/dumps`.
 
 - **[`process_migration_data.py`](process_migration_data.py)**
-  - Script em Python (utilizando **Pandas**) responsável pelo processamento de metadados diretamente a partir do PostgreSQL (usando `sql/extract_csv.sql`).
+  - Script em Python (utilizando **Pandas**) responsável pelo processamento de metadados diretamente a partir do PostgreSQL (usando `sql/extract_metadata.sql`).
   - **Funções principais**:
     - Remove tags HTML indesejadas de textos ricos via Expressões Regulares (preservando tags de formatação científica como `<i>` e `</i>`).
     - Limpa lixo de preenchimento ("Abstract") da coluna `dc.title.alternative`.
