@@ -1,7 +1,0 @@
-ui:
-  defaultLocale: pt_BR
-  languages:
-    - code: pt_BR
-      label: Português (Brasil)
-    - code: en
-      label: English
