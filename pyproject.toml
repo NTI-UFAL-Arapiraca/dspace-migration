@@ -5,6 +5,7 @@ description = "Migrating local UFAL thesis repository to DSpace"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "dspace-rest-client>=0.1.18",
     "pandas>=3.0.3",
     "psycopg2-binary>=2.9.11",
     "python-dotenv>=1.2.2",
@@ -20,4 +21,7 @@ packages = ["src/dspace_migration"]
 [project.scripts]
 extract-metadata = "dspace_migration.cli:run_extract_metadata"
 extract-pdfs = "dspace_migration.cli:run_extract_pdfs"
+setup-dspace = "dspace_migration.cli:run_setup_dspace"
+generate-import-script = "dspace_migration.cli:run_generate_import_script"
 migrate = "dspace_migration.cli:migrate_all"
+

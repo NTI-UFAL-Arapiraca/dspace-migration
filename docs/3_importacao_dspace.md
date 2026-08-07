@@ -1,31 +1,64 @@
 # Etapa 3: Importação Final no DSpace
 
-Nesta etapa, você usará a ferramenta de linha de comando (`dspace-cli`) de dentro do container docker para ingerir o pacote SAF (Simple Archive Format) para dentro do repositório DSpace.
+Nesta etapa, você criará a hierarquia de comunidades/coleções no DSpace e importará os itens do pacote SAF para as coleções corretas.
 
-## Executando o Comando de Importação
+## 1. Criar a Hierarquia de Comunidades e Coleções
+
+O comando `setup-dspace` conecta à API REST do DSpace e cria automaticamente as comunidades e coleções definidas em `dspace-organization/communities.json`. Se já existirem, são reutilizadas.
 
 Certifique-se de que:
-1. O volume do `saf_bundle` está corretamente montado (conforme Etapa 2).
-2. O usuário administrador (`test@test.edu`) existe e tem as permissões corretas.
-3. Você tem o ID UUID (`-c`) da Coleção de destino onde os itens serão publicados.
-
-Execute o comando de importação abaixo diretamente através do utilitário `docker exec`:
+1. A instância DSpace está rodando e acessível.
+2. As variáveis de ambiente estão configuradas no `.env`:
+   - `DSPACE_API_URL` (default: `http://localhost:8080/server/api`)
+   - `DSPACE_API_USER` (default: `test@test.edu`)
+   - `DSPACE_API_PASSWORD` (default: `admin`)
 
 ```bash
-docker exec -it dspace /dspace/bin/dspace import -a -e test@test.edu -c 2dff658e-9ed6-490c-80ac-826f0ed342fb -s /dspace/saf_bundle -m /dspace/saf_bundle/mapfile.txt
+uv run setup-dspace
 ```
 
-### Explicação dos Parâmetros
+O comando salva o mapeamento `{path → UUID}` em `collection_uuids.json`.
 
-* **`docker exec -it dspace`**: Executa o comando interativamente dentro do container nomeado `dspace`.
+## 2. Gerar o Script de Importação
+
+O comando `generate-import-script` gera o arquivo `import_all.sh` com um comando de importação por coleção:
+
+```bash
+uv run generate-import-script
+```
+
+O script gerado contém linhas como:
+
+```bash
+#!/bin/bash
+set -e
+/dspace/bin/dspace import -a -e test@test.edu -c <uuid> -s /dspace/saf_bundle/Arapiraca/Administração -m /dspace/saf_bundle/Arapiraca/Administração/mapfile.txt
+/dspace/bin/dspace import -a -e test@test.edu -c <uuid> -s /dspace/saf_bundle/Penedo/Engenharia\ de\ Pesca -m /dspace/saf_bundle/Penedo/Engenharia\ de\ Pesca/mapfile.txt
+# ... uma linha por coleção que contenha itens
+```
+
+## 3. Executar a Importação
+
+Copie o script `import_all.sh` para dentro do container e execute:
+
+```bash
+docker cp import_all.sh dspace:/dspace/import_all.sh
+docker exec -it dspace bash /dspace/import_all.sh
+```
+
+> [!IMPORTANT]
+> Certifique-se de que o volume do `saf_bundle` está montado no container conforme descrito na Etapa 2 (`/dspace/saf_bundle`).
+
+### Explicação dos Parâmetros (de cada linha do script)
+
 * **`/dspace/bin/dspace import`**: O script nativo de importação em lote do DSpace.
 * **`-a`** (add): Indica que os itens serão **adicionados** ao repositório.
 * **`-e test@test.edu`** (eperson): O e-mail do usuário administrador que fará a ação.
-* **`-c 2dff658e-9ed6-490c-80ac-826f0ed342fb`** (collection): O UUID da coleção que receberá as publicações. *Troque este UUID pelo ID correspondente à sua comunidade/coleção se for diferente.*
-* **`-s /dspace/saf_bundle`** (source): O caminho de origem (agora dentro do container) onde o seu SAF bundle está armazenado, montado como volume.
-* **`-m /dspace/saf_bundle/mapfile.txt`** (mapfile): O arquivo de saída (mapfile) que o DSpace vai gerar ao concluir a importação, mapeando os `id_origem` com os novos `HANDLEs` gerados no DSpace. Útil para reverter importações futuramente caso ocorram erros.
+* **`-c <uuid>`** (collection): O UUID da coleção destino (obtido automaticamente via `setup-dspace`).
+* **`-s /dspace/saf_bundle/<polo>/<coleção>`** (source): Diretório com os itens SAF daquela coleção.
+* **`-m .../mapfile.txt`** (mapfile): Arquivo de saída mapeando `id_origem` → `HANDLE` do DSpace.
 
-## Geração de Miniaturas e Pré-visualizações (Thumbnails / Media Filter)
+## 4. Geração de Miniaturas e Pré-visualizações (Thumbnails / Media Filter)
 
 Após a conclusão da importação dos itens, as miniaturas (thumbnails) e a extração de texto dos arquivos PDFs anexados precisam ser processadas. O DSpace **não** gera as miniaturas automaticamente durante a ingestão via SAF.
 
@@ -46,4 +79,3 @@ docker compose -p d10 -f cli.yml run --rm dspace-cli filter-media
 * **`-v`** (verbose): Exibe em tempo real os detalhes de cada arquivo sendo processado.
 * **`-f`** (force): Força o reprocessamento de arquivos, mesmo aqueles que já possuem miniaturas previamente geradas.
 * **`-p "ImageMagick PDF Thumbnail"`**: Processa especificamente as miniaturas de arquivos PDF utilizando ImageMagick (se configurado no DSpace).
-

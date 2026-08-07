@@ -25,7 +25,8 @@ O comando `extract-metadata` é responsável por:
 - Executar a consulta presente em `sql/extract_metadata.sql`.
 - Limpar tags HTML dos textos.
 - Padronizar datas para o formato ISO.
-- Criar a estrutura de diretórios do pacote SAF (`saf_bundle/item_[id]/`).
+- **Rotear cada publicação** para a coleção correta com base no mapeamento de cursos (`dspace-organization/map.json`).
+- Criar a estrutura de diretórios do pacote SAF **hierárquica por polo e coleção**: `saf_bundle/<polo>/<coleção>/item_[id]/`.
 - Gerar o arquivo `dublin_core.xml` para cada item com base nos metadados extraídos.
 
 Execute o comando:
@@ -35,6 +36,10 @@ uv run extract-metadata
 ```
 
 *Os itens com restrição/embargo de acesso serão exportados para o arquivo `embargoed_items.csv` para referência.*
+*O relatório de roteamento será exportado para `routing_report.csv`, indicando para qual coleção cada publicação foi direcionada.*
+
+> [!NOTE]
+> Publicações cujo curso de origem não tenha correspondência no `map.json` serão colocadas em `saf_bundle/_unmapped/` e registradas no relatório de roteamento com status `UNMAPPED`.
 
 ## 3. Extração dos Arquivos PDF Binários
 
@@ -48,6 +53,8 @@ uv run extract-pdfs
 
 *O script suporta paginação para não estourar a memória (configurável via `BATCH_SIZE` no `.env`) e gerencia adequadamente publicações com múltiplos anexos, criando/atualizando o arquivo `contents` do SAF automaticamente.*
 
+*Os diretórios de item são buscados recursivamente dentro do `saf_bundle/`, compatível com a estrutura hierárquica.*
+
 ## 4. Executando Ambos em Sequência
 
 Caso deseje rodar a extração completa de metadados e PDFs em um único comando, utilize:
@@ -58,4 +65,30 @@ uv run migrate
 
 ## Resultado
 
-Ao final desta etapa, você terá um diretório `saf_bundle/` (ou o nome configurado no `.env`) contendo subpastas para cada publicação (ex: `item_930/`), e cada subpasta conterá os arquivos `dublin_core.xml`, `contents` e os respectivos arquivos `.pdf`.
+Ao final desta etapa, você terá um diretório `saf_bundle/` (ou o nome configurado no `.env`) com a seguinte estrutura hierárquica:
+
+```
+saf_bundle/
+├── Arapiraca/
+│   ├── Administração/
+│   │   ├── item_123/
+│   │   │   ├── dublin_core.xml
+│   │   │   ├── contents
+│   │   │   └── tcc_fulano.pdf
+│   │   └── item_456/
+│   │       └── ...
+│   ├── Ciência da Computação/
+│   │   └── ...
+│   └── Outros/
+│       └── Documentos (BSCA)/
+│           └── ...
+├── Penedo/
+│   └── ...
+├── Viçosa/
+│   └── ...
+├── Palmeira dos Índios/
+│   └── ...
+└── _unmapped/
+    └── item_999/
+        └── ...
+```

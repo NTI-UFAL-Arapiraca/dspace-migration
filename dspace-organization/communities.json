@@ -1,0 +1,206 @@
+{
+  "name": "Polo / Campus",
+  "type": "community",
+  "subcommunities": [
+    {
+      "name": "Arapiraca",
+      "type": "community",
+      "collections": [
+        {
+          "name": "Administração"
+        },
+        {
+          "name": "Administração Pública"
+        },
+        {
+          "name": "Agronomia"
+        },
+        {
+          "name": "Arquitetura e Urbanismo"
+        },
+        {
+          "name": "Ciência da Computação"
+        },
+        {
+          "name": "Ciências Biológicas"
+        },
+        {
+          "name": "Educação Física"
+        },
+        {
+          "name": "Enfermagem"
+        },
+        {
+          "name": "Física"
+        },
+        {
+          "name": "Letras - Língua Portuguesa"
+        },
+        {
+          "name": "Matemática"
+        },
+        {
+          "name": "Medicina"
+        },
+        {
+          "name": "Pedagogia"
+        },
+        {
+          "name": "Química"
+        },
+        {
+          "name": "Zootecnia"
+        },
+        {
+          "name": "Esp. Estrat. Didát. para Educ. Básica"
+        },
+        {
+          "name": "Esp. Alfabetização e Letramento"
+        },
+        {
+          "name": "Esp. Gênero e Diversidade na Escola"
+        },
+        {
+          "name": "Mestrado Ens. e Form. de Prof. (PPGEFOP)"
+        },
+        {
+          "name": "Esp. Gestão Pública Municipal"
+        },
+        {
+          "name": "Mestrado Agricultura e Ambiente (PPGAA)"
+        },
+        {
+          "name": "Administração Pública (EaD)"
+        },
+        {
+          "name": "Física (EaD)"
+        },
+        {
+          "name": "Química (EaD)"
+        },
+        {
+          "name": "Letras - Língua Espanhola (EAD)"
+        },
+        {
+          "name": "Sistemas de Informação (EaD)"
+        },
+        {
+          "name": "Matemática (EaD)"
+        },
+        {
+          "name": "Esp. Gestão Escolar"
+        },
+        {
+          "name": "Letras - Língua Inglesa (EaD)"
+        },
+        {
+          "name": "Geografia (EaD)"
+        },
+        {
+          "name": "Ciências Sociais (EaD)"
+        },
+        {
+          "name": "Esp.Residência Agrária em Extensão Rural"
+        },
+        {
+          "name": "Esp. Educ. Espec. e Incl. Pers.Trans."
+        },
+        {
+          "name": "Mestrado Prof. Mat. Rede Nac. (PROFMAT)"
+        },
+        {
+          "name": "Mestrado Prof. Adm. Pub. (PROFIAP)"
+        }
+      ],
+      "subcommunities": [
+        {
+          "name": "Outros",
+          "type": "community",
+          "collections": [
+            {
+              "name": "Documentos (BSCA)"
+            },
+            {
+              "name": "Documentos (Artigos Científicos)"
+            },
+            {
+              "name": "Documentos (Livros Acesso Aberto)"
+            },
+            {
+              "name": "Memorial Acadêmico"
+            },
+            {
+              "name": "Eventos"
+            },
+            {
+              "name": "Programa de Computador"
+            },
+            {
+              "name": "Produção Acadêmica(Prof,/Téc.)UFAL-Arap."
+            },
+            {
+              "name": "Documentos (Acervo Histórico UFAL-Arap.)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Penedo",
+      "type": "community",
+      "collections": [
+        {
+          "name": "Ciências Biológicas"
+        },
+        {
+          "name": "Engenharia de Pesca"
+        },
+        {
+          "name": "Sistemas da Informação"
+        },
+        {
+          "name": "Turismo"
+        },
+        {
+          "name": "Esp. Gestão em Meio Ambiente"
+        },
+        {
+          "name": "Engenharia de Produção"
+        }
+      ],
+      "subcommunities": []
+    },
+    {
+      "name": "Viçosa",
+      "type": "community",
+      "collections": [
+        {
+          "name": "Medicina Veterinária"
+        },
+        {
+          "name": "Mestrado em Ciência Animal"
+        }
+      ],
+      "subcommunities": []
+    },
+    {
+      "name": "Palmeira dos Índios",
+      "type": "community",
+      "collections": [
+        {
+          "name": "Psicologia"
+        },
+        {
+          "name": "Serviço Social"
+        },
+        {
+          "name": "Esp. Dir. Sociais"
+        },
+        {
+          "name": "Esp. Gestão e Cont. Soc. das Polit. Pub."
+        }
+      ],
+      "subcommunities": []
+    }
+  ]
+}

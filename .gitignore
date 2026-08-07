@@ -24,3 +24,5 @@ embargoed_items.csv
 saf_bundle/
 .obsidian
 *lock*
+collection_uuids.json
+import_all.sh

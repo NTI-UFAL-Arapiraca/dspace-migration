@@ -1,12 +1,19 @@
 import os
 import re
 import sys
+import csv
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 from pathlib import Path
 import pandas as pd
 import psycopg2
 from dotenv import load_dotenv
+from dspace_migration.organization import (
+    load_curso_mapping,
+    resolve_collection_for_curso,
+    get_saf_subpath,
+    MAPPING_FILE,
+)
 
 load_dotenv()
 
@@ -149,13 +156,45 @@ def process_data(
     embargo_output.to_csv(embargo_csv, index=False)
     print(f"Exportados {len(embargo_output)} itens embargados para {embargo_csv}")
 
-    # 6. Geração da Estrutura SAF
-    print("Gerando estrutura SAF (Simple Archive Format)...")
+    # 6. Carregar mapeamento de cursos
+    print("Carregando mapeamento de cursos (map.json)...")
+    curso_mapping = load_curso_mapping(MAPPING_FILE)
+    print(f"Mapeamento carregado: {len(curso_mapping)} cursos mapeados.")
+
+    # Colunas que NÃO devem gerar metadados Dublin Core
+    NON_DC_COLUMNS = {
+        'id_origem', 'data_limite_embargo', 'autorizar_publicacao', 'curso_nome'
+    }
+
+    # 7. Geração da Estrutura SAF (hierárquica por polo/coleção)
+    print("Gerando estrutura SAF hierárquica (por polo/coleção)...")
     os.makedirs(saf_bundle_dir, exist_ok=True)
+
+    routing_report = []
+    unmapped_count = 0
 
     for row_dict in df.to_dict(orient='records'):
         id_origem = row_dict['id_origem']
-        item_dir = os.path.join(saf_bundle_dir, f'item_{id_origem}')
+        curso_nome = row_dict.get('curso_nome')
+
+        # Resolver roteamento: curso_nome → path da coleção
+        target_path = resolve_collection_for_curso(curso_nome, curso_mapping)
+        if target_path:
+            subpath = get_saf_subpath(target_path)
+            item_dir = os.path.join(saf_bundle_dir, str(subpath), f'item_{id_origem}')
+            routing_status = 'OK'
+        else:
+            item_dir = os.path.join(saf_bundle_dir, '_unmapped', f'item_{id_origem}')
+            routing_status = 'UNMAPPED'
+            unmapped_count += 1
+
+        routing_report.append({
+            'id_origem': id_origem,
+            'curso_nome': curso_nome or '',
+            'target_path': target_path or '_unmapped',
+            'status': routing_status,
+        })
+
         os.makedirs(item_dir, exist_ok=True)
 
         root = ET.Element('dublin_core', schema='dc')
@@ -175,6 +214,10 @@ def process_data(
 
         for col_name, val in row_dict.items():
             if pd.isna(val) or str(val).strip() == "":
+                continue
+
+            # Pular colunas de controle (não geram metadados DC)
+            if col_name in NON_DC_COLUMNS:
                 continue
 
             if col_name.startswith('dc.'):
@@ -207,4 +250,14 @@ def process_data(
         with open(os.path.join(item_dir, 'dublin_core.xml'), 'w', encoding='utf-8') as f:
             f.write(pretty_xml)
 
+    # Exportar relatório de roteamento
+    routing_csv = Path('routing_report.csv')
+    with open(routing_csv, 'w', encoding='utf-8', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=['id_origem', 'curso_nome', 'target_path', 'status'])
+        writer.writeheader()
+        writer.writerows(routing_report)
+
+    print(f"Relatório de roteamento exportado: {routing_csv}")
+    if unmapped_count > 0:
+        print(f"⚠️  ATENÇÃO: {unmapped_count} publicações sem mapeamento de curso → colocadas em '_unmapped/'")
     print("Geração do pacote SAF concluída com sucesso.")

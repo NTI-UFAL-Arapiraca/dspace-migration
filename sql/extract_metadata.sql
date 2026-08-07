@@ -23,6 +23,8 @@ SELECT
     t.name AS "dc.type",
     c.name AS "dc.description.degree",
     camp.name AS "dc.publisher.department",
+    -- Nome cru do curso para roteamento (NÃO incluído no dublin_core.xml)
+    c.name AS "curso_nome",
 
     -- Relacionamentos Muitos-para-Muitos (N:N) agrupados com separador '||'
     (

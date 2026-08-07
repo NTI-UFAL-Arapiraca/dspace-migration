@@ -1,0 +1,277 @@
+[
+  {
+    "old_name": "Administração",
+    "new_collection_name": "Administração",
+    "new_path": "Polo / Campus > Arapiraca > Administração"
+  },
+  {
+    "old_name": "Administração Pública",
+    "new_collection_name": "Administração Pública",
+    "new_path": "Polo / Campus > Arapiraca > Administração Pública"
+  },
+  {
+    "old_name": "Agronomia",
+    "new_collection_name": "Agronomia",
+    "new_path": "Polo / Campus > Arapiraca > Agronomia"
+  },
+  {
+    "old_name": "Arquitetura e Urbanismo",
+    "new_collection_name": "Arquitetura e Urbanismo",
+    "new_path": "Polo / Campus > Arapiraca > Arquitetura e Urbanismo"
+  },
+  {
+    "old_name": "Ciência da Computação",
+    "new_collection_name": "Ciência da Computação",
+    "new_path": "Polo / Campus > Arapiraca > Ciência da Computação"
+  },
+  {
+    "old_name": "Ciências Biológicas",
+    "new_collection_name": "Ciências Biológicas",
+    "new_path": "Polo / Campus > Arapiraca > Ciências Biológicas"
+  },
+  {
+    "old_name": "Educação Física",
+    "new_collection_name": "Educação Física",
+    "new_path": "Polo / Campus > Arapiraca > Educação Física"
+  },
+  {
+    "old_name": "Enfermagem",
+    "new_collection_name": "Enfermagem",
+    "new_path": "Polo / Campus > Arapiraca > Enfermagem"
+  },
+  {
+    "old_name": "Física",
+    "new_collection_name": "Física",
+    "new_path": "Polo / Campus > Arapiraca > Física"
+  },
+  {
+    "old_name": "Letras - Língua Portuguesa",
+    "new_collection_name": "Letras - Língua Portuguesa",
+    "new_path": "Polo / Campus > Arapiraca > Letras - Língua Portuguesa"
+  },
+  {
+    "old_name": "Matemática",
+    "new_collection_name": "Matemática",
+    "new_path": "Polo / Campus > Arapiraca > Matemática"
+  },
+  {
+    "old_name": "Medicina",
+    "new_collection_name": "Medicina",
+    "new_path": "Polo / Campus > Arapiraca > Medicina"
+  },
+  {
+    "old_name": "Pedagogia",
+    "new_collection_name": "Pedagogia",
+    "new_path": "Polo / Campus > Arapiraca > Pedagogia"
+  },
+  {
+    "old_name": "Química",
+    "new_collection_name": "Química",
+    "new_path": "Polo / Campus > Arapiraca > Química"
+  },
+  {
+    "old_name": "Zootecnia",
+    "new_collection_name": "Zootecnia",
+    "new_path": "Polo / Campus > Arapiraca > Zootecnia"
+  },
+  {
+    "old_name": "Esp. Estrat. Didát. para Educ. Básica",
+    "new_collection_name": "Esp. Estrat. Didát. para Educ. Básica",
+    "new_path": "Polo / Campus > Arapiraca > Esp. Estrat. Didát. para Educ. Básica"
+  },
+  {
+    "old_name": "Esp. Alfabetização e Letramento",
+    "new_collection_name": "Esp. Alfabetização e Letramento",
+    "new_path": "Polo / Campus > Arapiraca > Esp. Alfabetização e Letramento"
+  },
+  {
+    "old_name": "Esp. Gênero e Diversidade na Escola",
+    "new_collection_name": "Esp. Gênero e Diversidade na Escola",
+    "new_path": "Polo / Campus > Arapiraca > Esp. Gênero e Diversidade na Escola"
+  },
+  {
+    "old_name": "Mestrado Ens. e Form. de Prof. (PPGEFOP)",
+    "new_collection_name": "Mestrado Ens. e Form. de Prof. (PPGEFOP)",
+    "new_path": "Polo / Campus > Arapiraca > Mestrado Ens. e Form. de Prof. (PPGEFOP)"
+  },
+  {
+    "old_name": "Esp. Gestão Pública Municipal",
+    "new_collection_name": "Esp. Gestão Pública Municipal",
+    "new_path": "Polo / Campus > Arapiraca > Esp. Gestão Pública Municipal"
+  },
+  {
+    "old_name": "Mestrado Agricultura e Ambiente (PPGAA)",
+    "new_collection_name": "Mestrado Agricultura e Ambiente (PPGAA)",
+    "new_path": "Polo / Campus > Arapiraca > Mestrado Agricultura e Ambiente (PPGAA)"
+  },
+  {
+    "old_name": "Administração Pública (EaD)",
+    "new_collection_name": "Administração Pública (EaD)",
+    "new_path": "Polo / Campus > Arapiraca > Administração Pública (EaD)"
+  },
+  {
+    "old_name": "Física (EaD)",
+    "new_collection_name": "Física (EaD)",
+    "new_path": "Polo / Campus > Arapiraca > Física (EaD)"
+  },
+  {
+    "old_name": "Química (EaD)",
+    "new_collection_name": "Química (EaD)",
+    "new_path": "Polo / Campus > Arapiraca > Química (EaD)"
+  },
+  {
+    "old_name": "Letras - Língua Espanhola (EAD)",
+    "new_collection_name": "Letras - Língua Espanhola (EAD)",
+    "new_path": "Polo / Campus > Arapiraca > Letras - Língua Espanhola (EAD)"
+  },
+  {
+    "old_name": "Sistemas de Informação (EaD)",
+    "new_collection_name": "Sistemas de Informação (EaD)",
+    "new_path": "Polo / Campus > Arapiraca > Sistemas de Informação (EaD)"
+  },
+  {
+    "old_name": "Matemática (EaD)",
+    "new_collection_name": "Matemática (EaD)",
+    "new_path": "Polo / Campus > Arapiraca > Matemática (EaD)"
+  },
+  {
+    "old_name": "Esp. Gestão Escolar",
+    "new_collection_name": "Esp. Gestão Escolar",
+    "new_path": "Polo / Campus > Arapiraca > Esp. Gestão Escolar"
+  },
+  {
+    "old_name": "Letras - Língua Inglesa (EaD)",
+    "new_collection_name": "Letras - Língua Inglesa (EaD)",
+    "new_path": "Polo / Campus > Arapiraca > Letras - Língua Inglesa (EaD)"
+  },
+  {
+    "old_name": "Geografia (EaD)",
+    "new_collection_name": "Geografia (EaD)",
+    "new_path": "Polo / Campus > Arapiraca > Geografia (EaD)"
+  },
+  {
+    "old_name": "Ciências Sociais (EaD)",
+    "new_collection_name": "Ciências Sociais (EaD)",
+    "new_path": "Polo / Campus > Arapiraca > Ciências Sociais (EaD)"
+  },
+  {
+    "old_name": "Esp.Residência Agrária em Extensão Rural",
+    "new_collection_name": "Esp.Residência Agrária em Extensão Rural",
+    "new_path": "Polo / Campus > Arapiraca > Esp.Residência Agrária em Extensão Rural"
+  },
+  {
+    "old_name": "Esp. Educ. Espec. e Incl. Pers.Trans.",
+    "new_collection_name": "Esp. Educ. Espec. e Incl. Pers.Trans.",
+    "new_path": "Polo / Campus > Arapiraca > Esp. Educ. Espec. e Incl. Pers.Trans."
+  },
+  {
+    "old_name": "Mestrado Prof. Mat. Rede Nac. (PROFMAT)",
+    "new_collection_name": "Mestrado Prof. Mat. Rede Nac. (PROFMAT)",
+    "new_path": "Polo / Campus > Arapiraca > Mestrado Prof. Mat. Rede Nac. (PROFMAT)"
+  },
+  {
+    "old_name": "Mestrado Prof. Adm. Pub.  (PROFIAP)",
+    "new_collection_name": "Mestrado Prof. Adm. Pub. (PROFIAP)",
+    "new_path": "Polo / Campus > Arapiraca > Mestrado Prof. Adm. Pub. (PROFIAP)"
+  },
+  {
+    "old_name": "Documentos (BSCA)",
+    "new_collection_name": "Documentos (BSCA)",
+    "new_path": "Polo / Campus > Arapiraca > Outros > Documentos (BSCA)"
+  },
+  {
+    "old_name": "Documentos (Artigos Científicos)",
+    "new_collection_name": "Documentos (Artigos Científicos)",
+    "new_path": "Polo / Campus > Arapiraca > Outros > Documentos (Artigos Científicos)"
+  },
+  {
+    "old_name": "Documentos (Livros Acesso Aberto)",
+    "new_collection_name": "Documentos (Livros Acesso Aberto)",
+    "new_path": "Polo / Campus > Arapiraca > Outros > Documentos (Livros Acesso Aberto)"
+  },
+  {
+    "old_name": "Memorial Acadêmico",
+    "new_collection_name": "Memorial Acadêmico",
+    "new_path": "Polo / Campus > Arapiraca > Outros > Memorial Acadêmico"
+  },
+  {
+    "old_name": "Eventos",
+    "new_collection_name": "Eventos",
+    "new_path": "Polo / Campus > Arapiraca > Outros > Eventos"
+  },
+  {
+    "old_name": "Programa de Computador",
+    "new_collection_name": "Programa de Computador",
+    "new_path": "Polo / Campus > Arapiraca > Outros > Programa de Computador"
+  },
+  {
+    "old_name": "Produção Acadêmica(Prof,/Téc.)UFAL-Arap.",
+    "new_collection_name": "Produção Acadêmica(Prof,/Téc.)UFAL-Arap.",
+    "new_path": "Polo / Campus > Arapiraca > Outros > Produção Acadêmica(Prof,/Téc.)UFAL-Arap."
+  },
+  {
+    "old_name": "Documentos (Acervo Histórico UFAL-Arap.)",
+    "new_collection_name": "Documentos (Acervo Histórico UFAL-Arap.)",
+    "new_path": "Polo / Campus > Arapiraca > Outros > Documentos (Acervo Histórico UFAL-Arap.)"
+  },
+  {
+    "old_name": "Ciências Biológicas (U. E. Penedo)",
+    "new_collection_name": "Ciências Biológicas",
+    "new_path": "Polo / Campus > Penedo > Ciências Biológicas"
+  },
+  {
+    "old_name": "Engenharia de Pesca (U. E. Penedo)",
+    "new_collection_name": "Engenharia de Pesca",
+    "new_path": "Polo / Campus > Penedo > Engenharia de Pesca"
+  },
+  {
+    "old_name": "Sistemas da Informação (U.E. Penedo)",
+    "new_collection_name": "Sistemas da Informação",
+    "new_path": "Polo / Campus > Penedo > Sistemas da Informação"
+  },
+  {
+    "old_name": "Turismo (U.E. Penedo)",
+    "new_collection_name": "Turismo",
+    "new_path": "Polo / Campus > Penedo > Turismo"
+  },
+  {
+    "old_name": "Esp. Gestão em Meio Ambiente",
+    "new_collection_name": "Esp. Gestão em Meio Ambiente",
+    "new_path": "Polo / Campus > Penedo > Esp. Gestão em Meio Ambiente"
+  },
+  {
+    "old_name": "Engenharia de Produção (U. E. Penedo)",
+    "new_collection_name": "Engenharia de Produção",
+    "new_path": "Polo / Campus > Penedo > Engenharia de Produção"
+  },
+  {
+    "old_name": "Medicina Veterinária (U. E. Viçosa)",
+    "new_collection_name": "Medicina Veterinária",
+    "new_path": "Polo / Campus > Viçosa > Medicina Veterinária"
+  },
+  {
+    "old_name": "Mestrado em Ciência Animal (U.E. Viçosa)",
+    "new_collection_name": "Mestrado em Ciência Animal",
+    "new_path": "Polo / Campus > Viçosa > Mestrado em Ciência Animal"
+  },
+  {
+    "old_name": "Psicologia (U. E. Palmeira dos Índios)",
+    "new_collection_name": "Psicologia",
+    "new_path": "Polo / Campus > Palmeira dos Índios > Psicologia"
+  },
+  {
+    "old_name": "Serviço Social (U.E.Palmeira dos Índios)",
+    "new_collection_name": "Serviço Social",
+    "new_path": "Polo / Campus > Palmeira dos Índios > Serviço Social"
+  },
+  {
+    "old_name": "Esp. Dir. Sociais (U.E. P. dos Índios)",
+    "new_collection_name": "Esp. Dir. Sociais",
+    "new_path": "Polo / Campus > Palmeira dos Índios > Esp. Dir. Sociais"
+  },
+  {
+    "old_name": "Esp. Gestão e Cont. Soc. das Polit. Pub.",
+    "new_collection_name": "Esp. Gestão e Cont. Soc. das Polit. Pub.",
+    "new_path": "Polo / Campus > Palmeira dos Índios > Esp. Gestão e Cont. Soc. das Polit. Pub."
+  }
+]

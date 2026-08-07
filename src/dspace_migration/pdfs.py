@@ -367,7 +367,7 @@ def cleanup_orphaned_contents(saf_bundle_dir: Path) -> None:
         return
 
     cleaned = removed = 0
-    for item_dir in saf_bundle_dir.glob("item_*"):
+    for item_dir in saf_bundle_dir.rglob("item_*"):
         contents_file = item_dir / "contents"
         if not contents_file.is_file():
             continue
@@ -415,6 +415,15 @@ def export_issues_csv(issues: list[Issue], path: Path) -> None:
         writer.writerows(issue.as_dict() for issue in issues)
 
 
+def find_item_dir(saf_bundle_dir: Path, publicacao_id: int) -> Path | None:
+    """Busca recursivamente o diretório item_<id> dentro do SAF bundle."""
+    target = f"item_{publicacao_id}"
+    for match in saf_bundle_dir.rglob(target):
+        if match.is_dir():
+            return match
+    return None
+
+
 def extract_pdfs() -> None:
     issues: list[Issue] = []
     stats  = ExtractionStats()
@@ -453,16 +462,16 @@ def extract_pdfs() -> None:
                     pub_attachments[pub_id].append((anx_id, name, arquivo))
 
                 for publicacao_id in chunk:
-                    item_dir    = SAF_BUNDLE_DIR / f"item_{publicacao_id}"
+                    item_dir    = find_item_dir(SAF_BUNDLE_DIR, publicacao_id)
                     attachments = pub_attachments.get(publicacao_id, [])
 
-                    if not item_dir.is_dir():
+                    if item_dir is None:
                         logger.warning("Pasta SAF não encontrada para publicacao_id=%s.", publicacao_id)
                         stats.skipped_nodir += 1
                         issues.append(Issue(
                             publicacao_id=publicacao_id, anexo_id="-", filename="-",
                             issue_type="MISSING_SAF_DIRECTORY",
-                            details=f"Diretório '{item_dir}' não existe no disco",
+                            details=f"Diretório 'item_{publicacao_id}' não foi encontrado recursivamente no disco",
                             action_taken="Ignorado",
                         ))
                         continue
