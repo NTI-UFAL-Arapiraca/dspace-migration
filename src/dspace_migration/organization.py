@@ -201,7 +201,7 @@ def generate_import_script(dspace_user: str = None) -> None:
             has_items = any(p.is_dir() and p.name.startswith("item_") for p in collection_dir.iterdir())
             if has_items:
                 container_saf_path = f"/dspace/saf_bundle/{subpath.as_posix()}"
-                cmd = f"/dspace/bin/dspace import -a -e {user} -c {uuid} -s {container_saf_path} -m {container_saf_path}/mapfile.txt"
+                cmd = f'/dspace/bin/dspace import -a -e {user} -c {uuid} -s "{container_saf_path}" -m "{container_saf_path}/mapfile.txt"'
                 script_lines.append(cmd)
                 logger.info(f"Incluído no script de importação: '{path_str}'")
             else:
