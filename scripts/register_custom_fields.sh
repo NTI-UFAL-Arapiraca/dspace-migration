@@ -15,14 +15,15 @@
 # ==============================================================================
 
 CONTAINER_NAME="${1:-dspacedb}"
-DB_USER="${DB_USER:-dspace}"
-DB_NAME="${DB_NAME:-dspace}"
+DSPACE_DB_USER="${DSPACE_DB_USER:-dspace}"
+DSPACE_DB_NAME="${DSPACE_DB_NAME:-dspace}"
 
 echo "======================================================================"
 echo " Registrando metadados customizados no DSpace (Container: $CONTAINER_NAME)"
 echo "======================================================================"
 
-docker exec -i "$CONTAINER_NAME" psql -U "$DB_USER" -d "$DB_NAME" << 'EOF'
+docker exec -i "$CONTAINER_NAME" psql -v ON_ERROR_STOP=1 \
+  -U "$DSPACE_DB_USER" -d "$DSPACE_DB_NAME" << 'EOF'
 INSERT INTO metadatafieldregistry (metadata_schema_id, element, qualifier, scope_note)
 SELECT 
     (SELECT metadata_schema_id FROM metadataschemaregistry WHERE short_id = 'dc'),

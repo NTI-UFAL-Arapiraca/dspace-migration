@@ -1,6 +1,5 @@
 import os
 import re
-import sys
 import csv
 import html as html_module
 import xml.etree.ElementTree as ET
@@ -9,6 +8,7 @@ from pathlib import Path
 import pandas as pd
 import psycopg2
 from dotenv import load_dotenv
+from dspace_migration.access import determine_access_policy, write_access_policies
 from dspace_migration.organization import (
     load_curso_mapping,
     resolve_collection_for_curso,
@@ -85,7 +85,7 @@ def process_data(
 
     # 1. Limpeza de HTML
     print("Limpando tags HTML...")
-    html_pattern = re.compile(r'<(?!\/?i\b)[^>]+>|&nbsp;', flags=re.IGNORECASE)
+    html_pattern = re.compile(r'<[^>]+>|&nbsp;', flags=re.IGNORECASE)
 
     html_cols = [
         'dc.title',
@@ -150,10 +150,10 @@ def process_data(
     print("Realizando triagem de Observações vs Citações vs Notas Internas...")
     provenance_keywords = re.compile(
         r'\b(restrito|restrição|embargo|liberação|sigilo|confidencial|acesso\s+restrito|'
-        r'somente\s+admin|autoriza[çc][aã]o|solicitad[ao]\s+pela?\s+autor[ae])\b',
+        r'somente\s+admin|sem\s+autoriza[çc][aã]o|n[aã]o\s+autoriza[a-zçãõ]*|'
+        r'autoriza[çc][aã]o\s+(pendente|negada)|solicitad[ao]\s+pela?\s+autor[ae])\b',
         flags=re.IGNORECASE,
     )
-    note_keywords = re.compile(r'\b(acervo|impress[a-z]*|bca|biblioteca)\b', flags=re.IGNORECASE)
     citation_keywords = re.compile(
         r'\b(v\.|n\.|p\.|vol\.|issn|doi|http|https|editora|revista|anais|scielo)\b',
         flags=re.IGNORECASE,
@@ -183,27 +183,39 @@ def process_data(
                 df.at[idx, 'dc.description.provenance'] = text
                 df.at[idx, 'dc.description.note'] = None
                 df.at[idx, 'dc.identifier.citation'] = None
-            elif note_keywords.search(text):
-                df.at[idx, 'dc.description.note'] = text
-                df.at[idx, 'dc.identifier.citation'] = None
             elif citation_keywords.search(text):
                 df.at[idx, 'dc.identifier.citation'] = text
                 df.at[idx, 'dc.description.note'] = None
+            else:
+                # Observação geral (inclusive notas de acervo): evita que a
+                # cópia criada no SQL apareça simultaneamente como citação.
+                df.at[idx, 'dc.description.note'] = text
+                df.at[idx, 'dc.identifier.citation'] = None
 
-    # 5. Extração de Itens Embargados
+    # 5. Identificação de itens embargados/restritos
     print("Extraindo itens embargados...")
-    embargo_mask = pd.notna(df['data_limite_embargo']) | (
-        df['dc.description.provenance'].str.contains(r'restrito|embargo|liberação', case=False, na=False)
-        | df['dc.description.note'].str.contains(r'restrito|embargo|liberação', case=False, na=False)
-    )
+    access_policies = {}
+    embargo_rows = []
+    for row in df.to_dict(orient='records'):
+        policy = determine_access_policy(
+            row.get('data_limite_embargo'),
+            row.get('autorizar_publicacao'),
+            row.get('dc.description.provenance'),
+            row.get('dc.description.note'),
+        )
+        access_policies[row['id_origem']] = policy
+        if policy is not None:
+            embargo_rows.append({
+                'id_origem': row['id_origem'],
+                'data_limite_embargo': row.get('data_limite_embargo'),
+                'motivo': policy.reason,
+            })
 
-    embargo_df = df[embargo_mask].copy()
-    # Consolida o motivo: prefere provenance (nota interna), senão usa note
-    embargo_output = embargo_df[['id_origem', 'data_limite_embargo', 'dc.description.provenance', 'dc.description.note']].copy()
-    embargo_output['motivo'] = embargo_output['dc.description.provenance'].combine_first(embargo_output['dc.description.note'])
-    embargo_output = embargo_output[['id_origem', 'data_limite_embargo', 'motivo']]
-    embargo_output.to_csv(embargo_csv, index=False)
-    print(f"Exportados {len(embargo_output)} itens embargados para {embargo_csv}")
+    pd.DataFrame(
+        embargo_rows,
+        columns=['id_origem', 'data_limite_embargo', 'motivo'],
+    ).to_csv(embargo_csv, index=False)
+    print(f"Exportados {len(embargo_rows)} itens embargados/restritos para {embargo_csv}")
 
     # 6. Carregar mapeamento de cursos
     print("Carregando mapeamento de cursos (map.json)...")
@@ -218,6 +230,7 @@ def process_data(
     # 7. Geração da Estrutura SAF (hierárquica por polo/coleção)
     print("Gerando estrutura SAF hierárquica (por polo/coleção)...")
     os.makedirs(saf_bundle_dir, exist_ok=True)
+    write_access_policies(Path(saf_bundle_dir), access_policies)
 
     routing_report = []
     unmapped_count = 0
@@ -245,7 +258,6 @@ def process_data(
         })
 
         os.makedirs(item_dir, exist_ok=True)
-
         root = ET.Element('dublin_core', schema='dc')
 
         invalid_xml_chars = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]')

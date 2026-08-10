@@ -3,6 +3,7 @@ import argparse
 from pathlib import Path
 from dspace_migration.metadata import process_data
 from dspace_migration.pdfs import extract_pdfs
+from dspace_migration.embargoes import apply_embargoes
 from dspace_migration.organization import setup_dspace, generate_import_script
 from dspace_migration.statistics import inject_statistics
 
@@ -107,6 +108,34 @@ def run_generate_import_script():
         sys.exit(1)
 
 
+def run_apply_embargoes():
+    """CLI command to apply embargo release dates after the SAF import."""
+    parser = argparse.ArgumentParser(
+        description="Aplica no DSpace as datas de liberação dos PDFs embargados."
+    )
+    parser.add_argument(
+        "--saf-bundle-dir",
+        default=None,
+        help="Caminho para o SAF bundle (default: SAF_BUNDLE_DIR do .env)",
+    )
+    parser.add_argument("--dry-run", action="store_true", help="Não altera o DSpace")
+    args, _ = parser.parse_known_args()
+
+    print("=== Aplicando Embargos no DSpace ===")
+    try:
+        result = apply_embargoes(
+            saf_bundle_dir=args.saf_bundle_dir,
+            dry_run=args.dry_run,
+        )
+        print(
+            f"✔ {result.items} item(ns) embargado(s), "
+            f"{result.bitstreams} bitstream(s) verificado(s)."
+        )
+    except Exception as e:
+        print(f"✘ Erro fatal ao aplicar embargos: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
 def run_inject_stats():
     """CLI command to inject historical view counts into DSpace Solr statistics core."""
     parser = argparse.ArgumentParser(
@@ -147,7 +176,6 @@ def run_inject_stats():
 def migrate_all():
     """CLI command to run the full end-to-end migration pipeline."""
     import subprocess
-    import os
 
     parser = argparse.ArgumentParser(description="Pipeline completo de migração para o DSpace.")
     parser.add_argument(
@@ -173,16 +201,16 @@ def migrate_all():
     )
     args, _ = parser.parse_known_args()
 
-    STEPS = 6 if not args.skip_docker and not args.skip_stats else (
-        5 if args.skip_docker != args.skip_stats else 4
-    )
+    total_steps = 5 + int(not args.skip_docker) + int(not args.skip_stats)
+    step = 1
 
     print("══════════════════════════════════════════════════")
     print("       Pipeline Completo de Migração DSpace       ")
     print("══════════════════════════════════════════════════")
 
     # ── Etapa 1: Metadados + SAF ──────────────────────────────────────────────
-    print(f"\n[1/{STEPS}] Extraindo metadados e gerando SAF...")
+    print(f"\n[{step}/{total_steps}] Extraindo metadados e gerando SAF...")
+    step += 1
     try:
         process_data(limit=args.limit)
     except Exception as e:
@@ -190,7 +218,8 @@ def migrate_all():
         sys.exit(1)
 
     # ── Etapa 2: PDFs ────────────────────────────────────────────────────────
-    print(f"\n[2/{STEPS}] Extraindo arquivos PDF...")
+    print(f"\n[{step}/{total_steps}] Extraindo arquivos PDF...")
+    step += 1
     try:
         extract_pdfs(limit=args.limit)
     except Exception as e:
@@ -198,7 +227,8 @@ def migrate_all():
         sys.exit(1)
 
     # ── Etapa 3: Hierarquia DSpace ────────────────────────────────────────────
-    print(f"\n[3/{STEPS}] Configurando hierarquia de comunidades/coleções no DSpace...")
+    print(f"\n[{step}/{total_steps}] Configurando hierarquia de comunidades/coleções no DSpace...")
+    step += 1
     try:
         result = setup_dspace()
         if not result:
@@ -210,7 +240,8 @@ def migrate_all():
         sys.exit(1)
 
     # ── Etapa 4: Gerar script de importação ──────────────────────────────────
-    print(f"\n[4/{STEPS}] Gerando script de importação (import_all.sh)...")
+    print(f"\n[{step}/{total_steps}] Gerando script de importação (import_all.sh)...")
+    step += 1
     try:
         generate_import_script()
         print("  ✔ import_all.sh gerado.")
@@ -221,7 +252,8 @@ def migrate_all():
     # ── Etapa 5: Importação SAF no Docker ────────────────────────────────────
     if not args.skip_docker:
         container = args.docker_container
-        print(f"\n[5/{STEPS}] Executando importação SAF no container '{container}'...")
+        print(f"\n[{step}/{total_steps}] Executando importação SAF no container '{container}'...")
+        step += 1
         try:
             # Copia o script para dentro do container
             cp_cmd = ["docker", "cp", "import_all.sh", f"{container}:/dspace/import_all.sh"]
@@ -241,11 +273,24 @@ def migrate_all():
             print("✘ Comando 'docker' não encontrado. Verifique se o Docker está instalado.", file=sys.stderr)
             sys.exit(1)
     else:
-        print(f"\n[5/{STEPS}] Importação SAF no Docker: PULADA (--skip-docker)")
+        print("\nImportação SAF no Docker: PULADA (--skip-docker)")
+
+    # ── Aplicar datas de liberação dos embargos ────────────────────────
+    print(f"\n[{step}/{total_steps}] Aplicando políticas de embargo no DSpace...")
+    step += 1
+    try:
+        result = apply_embargoes()
+        print(
+            f"  ✔ {result.items} item(ns) embargado(s), "
+            f"{result.bitstreams} bitstream(s) verificado(s)."
+        )
+    except Exception as e:
+        print(f"✘ Erro fatal ao aplicar embargos: {e}", file=sys.stderr)
+        sys.exit(1)
 
     # ── Etapa 6: Injeção de estatísticas ─────────────────────────────────────
     if not args.skip_stats:
-        print(f"\n[6/{STEPS}] Injetando estatísticas de visualizações no Solr...")
+        print(f"\n[{step}/{total_steps}] Injetando estatísticas de visualizações no Solr...")
         try:
             inject_statistics()
             print("  ✔ Estatísticas injetadas.")
@@ -253,7 +298,7 @@ def migrate_all():
             print(f"✘ Erro fatal ao injetar estatísticas: {e}", file=sys.stderr)
             sys.exit(1)
     else:
-        print(f"\n[6/{STEPS}] Injeção de estatísticas: PULADA (--skip-stats)")
+        print("\nInjeção de estatísticas: PULADA (--skip-stats)")
 
     # ── Relatório final ───────────────────────────────────────────────────────
     check_and_report_issues()

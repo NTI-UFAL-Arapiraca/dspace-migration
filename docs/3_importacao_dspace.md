@@ -58,7 +58,20 @@ docker exec -it dspace bash /dspace/import_all.sh
 * **`-s /dspace/saf_bundle/<polo>/<coleção>`** (source): Diretório com os itens SAF daquela coleção.
 * **`-m .../mapfile.txt`** (mapfile): Arquivo de saída mapeando `id_origem` → `HANDLE` do DSpace.
 
-## 4. Geração de Miniaturas e Pré-visualizações (Thumbnails / Media Filter)
+## 4. Aplicação das Datas de Embargo
+
+Antes de gerar miniaturas, aplique as datas de liberação dos embargos:
+
+```bash
+uv run apply-embargoes
+```
+
+O comando lê `access_policies.json` e os `mapfile.txt`, localiza os bitstreams do bundle `ORIGINAL` e cria uma política `READ` para o grupo `Anonymous` com início em `data_limite_embargo`. Até essa data, somente administradores conseguem baixar o arquivo. Restrições sem data permanecem privadas.
+
+> [!IMPORTANT]
+> Não remova a opção `permissions` dos arquivos `contents`. Ela garante que um PDF nunca fique público no intervalo entre a importação SAF e a aplicação da data de embargo.
+
+## 5. Geração de Miniaturas e Pré-visualizações (Thumbnails / Media Filter)
 
 Após a conclusão da importação dos itens, as miniaturas (thumbnails) e a extração de texto dos arquivos PDFs anexados precisam ser processadas. O DSpace **não** gera as miniaturas automaticamente durante a ingestão via SAF.
 

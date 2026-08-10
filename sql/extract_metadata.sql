@@ -59,4 +59,5 @@ LEFT JOIN ud_campus camp ON camp.id = p.campus_id
 
 -- Removi o filtro restrito do WHERE para garantir que capturemos TODOS os registros.
 -- Eu farei a triagem programática com base nas colunas "autorizar_publicacao" e "data_limite_embargo".
-WHERE p.name IS NOT NULL;
+WHERE p.name IS NOT NULL
+ORDER BY p.id;

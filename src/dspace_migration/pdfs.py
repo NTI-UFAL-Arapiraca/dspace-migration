@@ -16,6 +16,11 @@ from typing import NamedTuple
 
 import psycopg2
 from dotenv import load_dotenv
+from dspace_migration.access import (
+    build_contents_entry,
+    contents_entry_filename,
+    read_access_policies,
+)
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -42,6 +47,7 @@ DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
 
 SAF_BUNDLE_DIR    = Path(os.getenv("SAF_BUNDLE_DIR", "saf_bundle"))
 BATCH_SIZE        = int(os.getenv("BATCH_SIZE", "50"))
+GS_TIMEOUT        = int(os.getenv("GS_TIMEOUT", "300"))
 EXIBIR_PDF_FILTER = True
 
 # ---------------------------------------------------------------------------
@@ -211,7 +217,12 @@ def convert_to_pdfa(pdf_bytes: bytes) -> tuple[bytes, bool, str]:
             tmp_in.write(pdf_bytes)
 
         cmd    = GS_CMD_BASE + [f"-sOutputFile={tmp_out_path}", str(tmp_in_path)]
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=GS_TIMEOUT,
+        )
 
         if result.returncode == 0 and tmp_out_path.stat().st_size > 0:
             return tmp_out_path.read_bytes(), True, ""
@@ -373,7 +384,12 @@ def cleanup_orphaned_contents(saf_bundle_dir: Path) -> None:
             continue
 
         lines       = contents_file.read_text(encoding="utf-8").splitlines()
-        valid_lines = [l.strip() for l in lines if l.strip() and (item_dir / l.strip()).is_file()]
+        valid_lines = [
+            line.strip()
+            for line in lines
+            if line.strip()
+            and (item_dir / contents_entry_filename(line)).is_file()
+        ]
 
         if valid_lines:
             if len(valid_lines) != len(lines):
@@ -387,6 +403,30 @@ def cleanup_orphaned_contents(saf_bundle_dir: Path) -> None:
         logger.info(
             "Limpeza de 'contents': %d corrigidos, %d removidos.", cleaned, removed
         )
+
+
+def clear_managed_contents(item_dir: Path) -> None:
+    """Remove o manifesto anterior e somente os arquivos que ele gerenciava.
+
+    Isso torna a reextração fiel ao banco: um anexo removido ou marcado com
+    ``exibir_pdf=false`` não pode sobreviver em um ``contents`` antigo.
+    """
+    contents_file = item_dir / "contents"
+    if not contents_file.is_file():
+        return
+
+    for line in contents_file.read_text(encoding="utf-8").splitlines():
+        filename = contents_entry_filename(line)
+        if not filename:
+            continue
+        relative = Path(filename)
+        if relative.is_absolute() or len(relative.parts) != 1:
+            logger.warning("Entrada insegura ignorada em %s: %s", contents_file, line)
+            continue
+        managed_file = item_dir / relative
+        if managed_file.is_file() or managed_file.is_symlink():
+            managed_file.unlink()
+    contents_file.unlink(missing_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -421,6 +461,11 @@ def export_issues_csv(issues: list[Issue], path: Path) -> None:
 def extract_pdfs(limit: int | None = None) -> None:
     issues: list[Issue] = []
     stats  = ExtractionStats()
+    issues_csv_path = Path("pdf_extraction_issues.csv")
+    # Evita que um relatório de execução anterior gere um falso alerta.
+    export_issues_csv([], issues_csv_path)
+    if BATCH_SIZE <= 0:
+        raise ValueError("BATCH_SIZE deve ser maior que zero")
     conn   = connect()
     logger.info("Conexão estabelecida com sucesso.")
 
@@ -430,13 +475,19 @@ def extract_pdfs(limit: int | None = None) -> None:
         if SAF_BUNDLE_DIR.is_dir():
             for p in SAF_BUNDLE_DIR.rglob("item_*"):
                 if p.is_dir():
-                    try:
-                        pub_id = int(p.name.split("_")[1])
-                        saf_dirs[pub_id] = p
-                    except (IndexError, ValueError):
-                        pass
+                    match = re.fullmatch(r"item_(\d+)", p.name)
+                    if match is None:
+                        continue
+                    pub_id = int(match.group(1))
+                    if pub_id in saf_dirs and saf_dirs[pub_id] != p:
+                        raise RuntimeError(
+                            f"Mais de uma pasta SAF encontrada para item_{pub_id}: "
+                            f"{saf_dirs[pub_id]} e {p}"
+                        )
+                    saf_dirs[pub_id] = p
 
         all_ids = sorted(saf_dirs.keys())
+        access_policies = read_access_policies(SAF_BUNDLE_DIR)
 
         if limit is not None:
             logger.info("Limitando a extração a %d publicações (modo teste).", limit)
@@ -482,6 +533,8 @@ def extract_pdfs(limit: int | None = None) -> None:
                         ))
                         continue
 
+                    clear_managed_contents(item_dir)
+
                     if not attachments:
                         logger.warning("Nenhum anexo para publicacao_id=%s — ignorado.", publicacao_id)
                         stats.skipped_null += 1
@@ -498,6 +551,7 @@ def extract_pdfs(limit: int | None = None) -> None:
 
                     used_names:     set[str]  = set()
                     contents_lines: list[str] = []
+                    access_policy = access_policies.get(publicacao_id)
 
                     for anexo_id, raw_name, arquivo in attachments:
                         saved = process_attachment(
@@ -511,7 +565,9 @@ def extract_pdfs(limit: int | None = None) -> None:
                             issues=issues,
                         )
                         if saved:
-                            contents_lines.append(saved)
+                            contents_lines.append(
+                                build_contents_entry(saved, access_policy)
+                            )
 
                     if contents_lines:
                         (item_dir / "contents").write_text(
@@ -521,9 +577,7 @@ def extract_pdfs(limit: int | None = None) -> None:
         cleanup_orphaned_contents(SAF_BUNDLE_DIR)
 
         # --- Relatório de anomalias --------------------------------------- #
-        issues_csv_path = Path("pdf_extraction_issues.csv")
-        if issues:
-            export_issues_csv(issues, issues_csv_path)
+        export_issues_csv(issues, issues_csv_path)
 
         # --- Resumo ------------------------------------------------------- #
         SEP = "=" * 70

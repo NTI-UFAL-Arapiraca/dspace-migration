@@ -28,6 +28,8 @@ O comando `extract-metadata` é responsável por:
 - **Rotear cada publicação** para a coleção correta com base no mapeamento de cursos (`dspace-organization/map.json`).
 - Criar a estrutura de diretórios do pacote SAF **hierárquica por polo e coleção**: `saf_bundle/<polo>/<coleção>/item_[id]/`.
 - Gerar o arquivo `dublin_core.xml` para cada item com base nos metadados extraídos.
+- Identificar embargos ativos pela coluna `data_limite_embargo` e restrições sem prazo.
+- Gerar `access_policies.json` na raiz do bundle para conservar as datas de liberação.
 
 Execute o comando:
 
@@ -35,7 +37,7 @@ Execute o comando:
 uv run extract-metadata
 ```
 
-*Os itens com restrição/embargo de acesso serão exportados para o arquivo `embargoed_items.csv` para referência.*
+*Os itens com restrição/embargo de acesso serão exportados para o arquivo `embargoed_items.csv` para referência. Uma data de embargo igual ou anterior ao dia da extração é considerada vencida.*
 *O relatório de roteamento será exportado para `routing_report.csv`, indicando para qual coleção cada publicação foi direcionada.*
 
 > [!NOTE]
@@ -53,15 +55,20 @@ uv run extract-pdfs
 
 *O script suporta paginação para não estourar a memória (configurável via `BATCH_SIZE` no `.env`) e gerencia adequadamente publicações com múltiplos anexos, criando/atualizando o arquivo `contents` do SAF automaticamente.*
 
+Para itens embargados ou restritos, cada linha de `contents` recebe uma permissão de leitura exclusiva do grupo `Administrator`. Assim, o PDF já entra privado no DSpace, antes da configuração da data de liberação.
+
 *Os diretórios de item são buscados recursivamente dentro do `saf_bundle/`, compatível com a estrutura hierárquica.*
 
-## 4. Executando Ambos em Sequência
+## 4. Executando somente as duas extrações em sequência
 
-Caso deseje rodar a extração completa de metadados e PDFs em um único comando, utilize:
+Para gerar somente o pacote SAF, sem acessar ou alterar o DSpace, execute:
 
 ```bash
-uv run migrate
+uv run extract-metadata
+uv run extract-pdfs
 ```
+
+O comando `uv run migrate` vai além desta etapa: ele também configura a hierarquia via API, gera e executa a importação no container DSpace, aplica os embargos e injeta as estatísticas. Use `--skip-docker` apenas quando os itens desta execução já tiverem sido importados e os `mapfile.txt` correspondentes existirem; use `--skip-stats` para não alterar o Solr.
 
 ## Resultado
 
@@ -69,6 +76,7 @@ Ao final desta etapa, você terá um diretório `saf_bundle/` (ou o nome configu
 
 ```
 saf_bundle/
+├── access_policies.json
 ├── Arapiraca/
 │   ├── Administração/
 │   │   ├── item_123/

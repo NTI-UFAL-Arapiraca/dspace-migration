@@ -24,6 +24,6 @@ extract-metadata = "dspace_migration.cli:run_extract_metadata"
 extract-pdfs = "dspace_migration.cli:run_extract_pdfs"
 setup-dspace = "dspace_migration.cli:run_setup_dspace"
 generate-import-script = "dspace_migration.cli:run_generate_import_script"
+apply-embargoes = "dspace_migration.cli:run_apply_embargoes"
 migrate = "dspace_migration.cli:migrate_all"
 inject-stats = "dspace_migration.cli:run_inject_stats"
-

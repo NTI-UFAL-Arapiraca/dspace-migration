@@ -1,6 +1,7 @@
 import os
 import re
 import uuid
+from collections.abc import Iterator
 import requests
 import psycopg2
 from datetime import datetime, timedelta, timezone
@@ -31,7 +32,7 @@ SOLR_BATCH_SIZE = int(os.getenv("SOLR_BATCH_SIZE", "500"))
 SAF_BUNDLE_DIR = os.getenv("SAF_BUNDLE_DIR", "saf_bundle")
 
 # Padrão do mapfile: "item_<id_origem>   <handle>"
-MAPFILE_LINE_RE = re.compile(r"^item_(\d+)\s+(\S+)")
+MAPFILE_LINE_RE = re.compile(r"^item_(\d+)\s+(\S+)\s*$")
 
 
 def _connect_origem():
@@ -65,7 +66,7 @@ def read_mapfiles(saf_bundle_dir: str) -> dict:
     bundle = Path(saf_bundle_dir)
     mapping = {}
 
-    mapfiles = list(bundle.rglob("mapfile.txt"))
+    mapfiles = sorted(bundle.rglob("mapfile.txt"))
     if not mapfiles:
         raise FileNotFoundError(
             f"Nenhum mapfile.txt encontrado em '{bundle}'. "
@@ -74,12 +75,26 @@ def read_mapfiles(saf_bundle_dir: str) -> dict:
 
     print(f"Encontrados {len(mapfiles)} mapfile(s). Lendo...")
     for mf in mapfiles:
-        for line in mf.read_text(encoding="utf-8").splitlines():
-            m = MAPFILE_LINE_RE.match(line.strip())
-            if m:
-                id_origem = int(m.group(1))
-                handle    = m.group(2)
-                mapping[id_origem] = handle
+        for line_number, line in enumerate(
+            mf.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            stripped = line.strip()
+            if not stripped:
+                continue
+            match = MAPFILE_LINE_RE.fullmatch(stripped)
+            if match is None:
+                raise ValueError(
+                    f"Linha inválida em {mf}:{line_number}: {line!r}"
+                )
+            id_origem = int(match.group(1))
+            handle = match.group(2)
+            previous = mapping.get(id_origem)
+            if previous is not None and previous != handle:
+                raise ValueError(
+                    f"item_{id_origem} possui handles conflitantes: "
+                    f"{previous} e {handle}"
+                )
+            mapping[id_origem] = handle
 
     print(f"  → {len(mapping)} itens mapeados (id_origem → handle)")
     return mapping
@@ -167,6 +182,10 @@ def _uniform_timestamps(n: int, start: datetime, end: datetime) -> list:
     Gera N timestamps distribuídos uniformemente entre start e end.
     Retorna strings no formato ISO 8601 com sufixo 'Z' (Solr TrieDateField).
     """
+    if n < 0:
+        raise ValueError("A quantidade de visualizações não pode ser negativa")
+    if n == 0:
+        return []
     if n == 1:
         mid = start + (end - start) / 2
         return [mid.strftime("%Y-%m-%dT%H:%M:%SZ")]
@@ -179,15 +198,30 @@ def _uniform_timestamps(n: int, start: datetime, end: datetime) -> list:
     ]
 
 
-def generate_solr_docs(item_uuid: str, n_views: int, ano_pub) -> list:
+def iter_solr_docs(
+    item_uuid: str,
+    n_views: int,
+    ano_pub,
+    *,
+    now: datetime | None = None,
+) -> Iterator[dict]:
     """
     Gera n_views documentos Solr sintéticos para um item (type=2, view).
     Os timestamps são distribuídos uniformemente entre jan/ano_pub e hoje.
     """
-    now = datetime.now(tz=timezone.utc)
+    if n_views < 0:
+        raise ValueError("A quantidade de visualizações não pode ser negativa")
+    now = now or datetime.now(tz=timezone.utc)
+    if now.tzinfo is None:
+        raise ValueError("'now' precisa conter fuso horário")
 
-    if ano_pub:
-        start = datetime(int(ano_pub), 1, 1, tzinfo=timezone.utc)
+    try:
+        publication_year = int(ano_pub) if ano_pub else None
+    except (TypeError, ValueError):
+        publication_year = None
+
+    if publication_year and 1000 <= publication_year <= 9999:
+        start = datetime(publication_year, 1, 1, tzinfo=timezone.utc)
     else:
         # Fallback: distribui nos últimos 5 anos
         start = now - timedelta(days=5 * 365)
@@ -196,21 +230,41 @@ def generate_solr_docs(item_uuid: str, n_views: int, ano_pub) -> list:
     if start >= now:
         start = now - timedelta(days=365)
 
-    timestamps = _uniform_timestamps(n_views, start, now)
+    if n_views == 1:
+        timestamps = [start + (now - start) / 2]
+    elif n_views > 1:
+        step = (now - start) / (n_views - 1)
+        timestamps = (start + index * step for index in range(n_views))
+    else:
+        timestamps = ()
 
-    docs = []
-    for ts in timestamps:
-        docs.append({
-            "uid":             str(uuid.uuid4()),
+    for index, timestamp in enumerate(timestamps):
+        yield {
+            # UUID determinístico: uma reexecução sobrescreve os mesmos
+            # eventos no Solr em vez de duplicar a contagem histórica.
+            "uid":             str(uuid.uuid5(
+                uuid.NAMESPACE_URL,
+                f"dspace-migration:view:{item_uuid}:{index}",
+            )),
             "type":            2,                      # 2 = item view no DSpace
             "id":              item_uuid,
             "owningItem":      item_uuid,
-            "time":            ts,
+            "time":            timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "ip":              "127.0.0.1",
             "isBot":           False,
             "statistics_type": "view",
-        })
-    return docs
+        }
+
+
+def generate_solr_docs(
+    item_uuid: str,
+    n_views: int,
+    ano_pub,
+    *,
+    now: datetime | None = None,
+) -> list:
+    """Versão materializada de :func:`iter_solr_docs`, útil para inspeção."""
+    return list(iter_solr_docs(item_uuid, n_views, ano_pub, now=now))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -256,6 +310,8 @@ def inject_statistics(
     """
     saf_dir = saf_bundle_dir or SAF_BUNDLE_DIR
     solr    = solr_url or SOLR_URL
+    if SOLR_BATCH_SIZE <= 0:
+        raise ValueError("SOLR_BATCH_SIZE deve ser maior que zero")
 
     # ── Etapa 1: mapfiles
     id_to_handle = read_mapfiles(saf_dir)
@@ -298,17 +354,17 @@ def inject_statistics(
     docs_done  = 0
 
     for id_origem, info in items_to_inject.items():
-        docs = generate_solr_docs(
+        docs = iter_solr_docs(
             item_uuid=info["uuid"],
             n_views=info["visualizacoes"],
             ano_pub=info["ano_pub"],
         )
-        batch.extend(docs)
-
-        if len(batch) >= SOLR_BATCH_SIZE:
-            _post_to_solr(batch, solr)
-            docs_done += len(batch)
-            batch = []
+        for doc in docs:
+            batch.append(doc)
+            if len(batch) == SOLR_BATCH_SIZE:
+                _post_to_solr(batch, solr)
+                docs_done += len(batch)
+                batch = []
 
         items_done += 1
         if items_done % 200 == 0:
