@@ -227,9 +227,14 @@ def process_data(
     curso_mapping = load_curso_mapping(MAPPING_FILE)
     print(f"Mapeamento carregado: {len(curso_mapping)} cursos mapeados.")
 
-    # Colunas que NÃO devem gerar metadados Dublin Core
-    NON_DC_COLUMNS = {
-        'id_origem', 'data_limite_embargo', 'autorizar_publicacao', 'curso_nome'
+    # Colunas de controle ou gerenciadas internamente pelo DSpace que não
+    # devem ser escritas no dublin_core.xml.
+    EXCLUDED_COLUMNS = {
+        'id_origem',
+        'data_limite_embargo',
+        'autorizar_publicacao',
+        'curso_nome',
+        'dc.date.submitted',
     }
 
     # 7. Geração da Estrutura SAF (hierárquica por polo/coleção)
@@ -283,7 +288,7 @@ def process_data(
                 continue
 
             # Pular colunas de controle (não geram metadados DC)
-            if col_name in NON_DC_COLUMNS:
+            if col_name in EXCLUDED_COLUMNS:
                 continue
 
             if col_name.startswith('dc.'):

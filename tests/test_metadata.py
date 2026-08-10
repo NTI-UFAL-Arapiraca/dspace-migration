@@ -19,8 +19,10 @@ class MetadataPipelineTests(unittest.TestCase):
             "dc.title.alternative": "Abstract",
             "dc.description.abstract[pt_BR]": "<i>Mesmo resumo</i>",
             "dc.description.abstract[en]": "<i>Mesmo resumo</i>",
-            "dc.date.issued": "2024",
-            "dc.date.submitted": "2024-05-03",
+            "dc.date.issued": "2024-05-03",
+            # Simula uma consulta antiga/personalizada: o pipeline deve
+            # descartar este campo gerenciado internamente pelo DSpace.
+            "dc.date.submitted": "2024-05-04",
             "dc.format.extent": 25,
             "dc.description.note": "Exemplar disponível na biblioteca",
             "dc.identifier.citation": "Exemplar disponível na biblioteca",
@@ -90,7 +92,11 @@ class MetadataPipelineTests(unittest.TestCase):
                 ("description", "abstract", "en", "Mesmo resumo"), values
             )
             self.assertNotIn(("title", "alternative", None, "Abstract"), values)
-            self.assertIn(("date", "issued", None, "2024-01-01"), values)
+            self.assertIn(("date", "issued", None, "2024-05-03"), values)
+            self.assertFalse(
+                any(element == "date" and qualifier == "submitted"
+                    for element, qualifier, _, _ in values)
+            )
             self.assertIn(("language", "iso", None, "pt_BR"), values)
             self.assertIn(
                 ("description", "note", None, "Exemplar disponível na biblioteca"),

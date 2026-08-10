@@ -12,8 +12,7 @@ O fluxo parte do banco PostgreSQL legado `biblioteca`, gera um pacote SAF e impo
 | Título alternativo | `ud_biblioteca_publicacao.titulo_abstract` | `dc.title.alternative` | O valor isolado `Abstract` é descartado por não representar um título. |
 | Resumo em português | `ud_biblioteca_publicacao.resumo` | `dc.description.abstract`, idioma `pt_BR` | Remove HTML e normaliza espaços e quebras de linha. |
 | Abstract em inglês | `ud_biblioteca_publicacao.abstract` | `dc.description.abstract`, idioma `en` | Recebe a mesma limpeza. Se for idêntico ao resumo em português, a duplicata em inglês é removida. |
-| Ano/data de publicação | `ud_biblioteca_publicacao.ano_pub` | `dc.date.issued` | Um ano isolado, como `2024`, é convertido em `2024-01-01`. |
-| Data de defesa | `ud_biblioteca_publicacao.data_defesa` | `dc.date.submitted` | Mantida no formato retornado pelo PostgreSQL. |
+| Data de defesa | `ud_biblioteca_publicacao.data_defesa` | `dc.date.issued` | Mantida no formato retornado pelo PostgreSQL. `dc.date.submitted` não é gerado pela migração. |
 | Número de páginas | `ud_biblioteca_publicacao.numero_paginas` | `dc.format.extent` | Migrado como texto. |
 | Tipo de documento | `ud_biblioteca_publicacao.tipo_id` → `ud_biblioteca_publicacao_tipo.name` | `dc.type` | Mantém a denominação existente na base. |
 | Curso | `ud_biblioteca_publicacao.curso_id` → `ud_curso.name` | `dc.description.degree` | Também é usado para escolher a coleção de destino; veja a seção 4. |
@@ -93,6 +92,7 @@ Esses eventos preservam a contagem total, mas não representam as datas, IPs ou 
 
 Os campos abaixo apareciam em versões anteriores deste documento como desejáveis, mas não possuem extração ou mapeamento implementado no pipeline atual:
 
+- data de submissão (`dc.date.submitted`), reservada ao preenchimento interno pelo DSpace;
 - grau acadêmico (`dc.type.degree`);
 - instituição e local de defesa (`dc.publisher` e `dc.publisher.place`);
 - DOI estruturado (`dc.identifier.doi`);

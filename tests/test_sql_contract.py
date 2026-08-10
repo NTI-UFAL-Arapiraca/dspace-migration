@@ -31,6 +31,14 @@ class MetadataSqlContractTests(unittest.TestCase):
         self.assertIn("pmb.ud_biblioteca_publicacao_id = p.id", query)
         self.assertIn('AS "dc.contributor.referee"', query)
 
+    def test_query_maps_defense_date_only_to_date_issued(self):
+        query = (PROJECT_ROOT / "sql" / "extract_metadata.sql").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn('p.data_defesa AS "dc.date.issued"', query)
+        self.assertNotIn('AS "dc.date.submitted"', query)
+
 
 if __name__ == "__main__":
     unittest.main()
