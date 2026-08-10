@@ -24,6 +24,7 @@ DB_NAME = os.getenv("DB_NAME", "biblioteca")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
 SAF_BUNDLE_DIR = os.getenv("SAF_BUNDLE_DIR", "saf_bundle")
+DEFAULT_DOCUMENT_LANGUAGE = "pt_BR"
 
 DEFAULT_SQL_FILE = Path("sql/extract_metadata.sql")
 if not DEFAULT_SQL_FILE.exists():
@@ -145,6 +146,10 @@ def process_data(
 
     if 'dc.date.issued' in df.columns:
         df['dc.date.issued'] = df['dc.date.issued'].apply(standardize_date)
+
+    # O acervo desta migração é composto por documentos em português do Brasil.
+    # O campo faz parte do registro Dublin Core padrão do DSpace.
+    df['dc.language.iso'] = DEFAULT_DOCUMENT_LANGUAGE
 
     # 4. Triagem de Observações vs Citações vs Notas Internas (Provenance)
     print("Realizando triagem de Observações vs Citações vs Notas Internas...")

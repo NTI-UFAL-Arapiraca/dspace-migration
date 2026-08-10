@@ -90,6 +90,7 @@ class MetadataPipelineTests(unittest.TestCase):
             )
             self.assertNotIn(("title", "alternative", None, "Abstract"), values)
             self.assertIn(("date", "issued", None, "2024-01-01"), values)
+            self.assertIn(("language", "iso", None, "pt_BR"), values)
             self.assertIn(
                 ("description", "note", None, "Exemplar disponível na biblioteca"),
                 values,

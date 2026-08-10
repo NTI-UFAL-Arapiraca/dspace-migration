@@ -19,6 +19,7 @@ O fluxo parte do banco PostgreSQL legado `biblioteca`, gera um pacote SAF e impo
 | Curso | `ud_biblioteca_publicacao.curso_id` → `ud_curso.name` | `dc.description.degree` | Também é usado para escolher a coleção de destino; veja a seção 4. |
 | Campus/departamento | `ud_biblioteca_publicacao.campus_id` → `ud_campus.name` | `dc.publisher.department` | Mantém a denominação existente na base. |
 | Palavras-chave | relação `publicacao_p_chave_rel` → `ud_biblioteca_p_chave.name` | `dc.subject` | Cada palavra-chave vira um valor separado no XML. |
+| Idioma do documento | Valor definido pela migração | `dc.language.iso` | Todos os itens recebem `pt_BR`, indicando português do Brasil. Não existe uma coluna de idioma consultada na origem. |
 
 ## 2. Pessoas Relacionadas à Publicação
 
@@ -91,7 +92,6 @@ Esses eventos preservam a contagem total, mas não representam as datas, IPs ou 
 
 Os campos abaixo apareciam em versões anteriores deste documento como desejáveis, mas não possuem extração ou mapeamento implementado no pipeline atual:
 
-- idioma do trabalho (`dc.language.iso`);
 - grau acadêmico (`dc.type.degree`);
 - instituição e local de defesa (`dc.publisher` e `dc.publisher.place`);
 - membros da banca (`dc.contributor.committee`);
