@@ -9,6 +9,7 @@ dependencies = [
     "pandas>=3.0.3",
     "psycopg2-binary>=2.9.11",
     "python-dotenv>=1.2.2",
+    "requests>=2.32",
 ]
 
 [build-system]
@@ -24,4 +25,5 @@ extract-pdfs = "dspace_migration.cli:run_extract_pdfs"
 setup-dspace = "dspace_migration.cli:run_setup_dspace"
 generate-import-script = "dspace_migration.cli:run_generate_import_script"
 migrate = "dspace_migration.cli:migrate_all"
+inject-stats = "dspace_migration.cli:run_inject_stats"
 

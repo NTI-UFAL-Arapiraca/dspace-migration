@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import csv
+import html as html_module
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 from pathlib import Path
@@ -97,11 +98,30 @@ def process_data(
     def clean_html(val):
         if pd.isna(val):
             return val
-        return html_pattern.sub('', str(val)).strip()
+        # Remove tags HTML, depois faz unescape de entidades (&amp; → &, &lt; → <, etc.)
+        cleaned = html_pattern.sub('', str(val)).strip()
+        cleaned = html_module.unescape(cleaned).strip()
+        # Retorna None se o conteúdo ficou vazio após limpeza
+        return cleaned if cleaned else None
 
     for col in html_cols:
         if col in df.columns:
             df[col] = df[col].apply(clean_html)
+
+    # 1b. Deduplicação de abstract: se pt_BR == en (mesmo texto), mantém só pt_BR
+    print("Deduplicando abstracts bilíngues...")
+    pt_col = 'dc.description.abstract[pt_BR]'
+    en_col  = 'dc.description.abstract[en]'
+    if pt_col in df.columns and en_col in df.columns:
+        # Caso 1: conteúdo idêntico → mantém pt_BR, remove en
+        same_mask = (
+            df[pt_col].notna() & df[en_col].notna()
+            & (df[pt_col].str.strip() == df[en_col].str.strip())
+        )
+        df.loc[same_mask, en_col] = None
+        n_same = same_mask.sum()
+        if n_same:
+            print(f"  {n_same} registros com resumo == abstract (duplicatas removidas do campo en)")
 
     # 2. Tratamento dc.title.alternative
     print("Tratando dc.title.alternative...")
