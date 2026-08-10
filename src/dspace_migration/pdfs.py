@@ -415,26 +415,32 @@ def export_issues_csv(issues: list[Issue], path: Path) -> None:
         writer.writerows(issue.as_dict() for issue in issues)
 
 
-def find_item_dir(saf_bundle_dir: Path, publicacao_id: int) -> Path | None:
-    """Busca recursivamente o diretório item_<id> dentro do SAF bundle."""
-    target = f"item_{publicacao_id}"
-    for match in saf_bundle_dir.rglob(target):
-        if match.is_dir():
-            return match
-    return None
+# Removido find_item_dir pois o mapeamento é feito no inicio de extract_pdfs
 
 
-def extract_pdfs() -> None:
+def extract_pdfs(limit: int | None = None) -> None:
     issues: list[Issue] = []
     stats  = ExtractionStats()
     conn   = connect()
     logger.info("Conexão estabelecida com sucesso.")
 
     try:
-        with conn.cursor() as cur:
-            logger.info("Buscando lista de IDs únicos a processar...")
-            cur.execute(IDS_QUERY, {"exibir_pdf": EXIBIR_PDF_FILTER})
-            all_ids = [row[0] for row in cur.fetchall()]
+        logger.info("Varrendo diretórios SAF gerados para identificar os itens...")
+        saf_dirs: dict[int, Path] = {}
+        if SAF_BUNDLE_DIR.is_dir():
+            for p in SAF_BUNDLE_DIR.rglob("item_*"):
+                if p.is_dir():
+                    try:
+                        pub_id = int(p.name.split("_")[1])
+                        saf_dirs[pub_id] = p
+                    except (IndexError, ValueError):
+                        pass
+
+        all_ids = sorted(saf_dirs.keys())
+
+        if limit is not None:
+            logger.info("Limitando a extração a %d publicações (modo teste).", limit)
+            all_ids = all_ids[:limit]
 
         total = len(all_ids)
         logger.info("Total de publicações únicas (exibir_pdf=%s): %d", EXIBIR_PDF_FILTER, total)
@@ -462,7 +468,7 @@ def extract_pdfs() -> None:
                     pub_attachments[pub_id].append((anx_id, name, arquivo))
 
                 for publicacao_id in chunk:
-                    item_dir    = find_item_dir(SAF_BUNDLE_DIR, publicacao_id)
+                    item_dir    = saf_dirs.get(publicacao_id)
                     attachments = pub_attachments.get(publicacao_id, [])
 
                     if item_dir is None:

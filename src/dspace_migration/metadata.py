@@ -62,6 +62,7 @@ def process_data(
     sql_file=None,
     embargo_csv="embargoed_items.csv",
     saf_bundle_dir=SAF_BUNDLE_DIR,
+    limit=None,
 ):
     if sql_file is None:
         sql_file = DEFAULT_SQL_FILE
@@ -73,6 +74,11 @@ def process_data(
         raise FileNotFoundError(f"Arquivo SQL não encontrado em '{sql_path}'.")
 
     df = fetch_data_from_db(sql_path)
+
+    if limit is not None:
+        limit = int(limit)
+        print(f"Limitando o processamento a {limit} registros (modo teste)...")
+        df = df.head(limit)
 
     print(f"Total de registros carregados: {df.shape[0]}")
 
@@ -117,42 +123,62 @@ def process_data(
     if 'dc.date.issued' in df.columns:
         df['dc.date.issued'] = df['dc.date.issued'].apply(standardize_date)
 
-    # 4. Triagem de Observações vs Citações
-    print("Realizando triagem de Observações vs Citações...")
+    # 4. Triagem de Observações vs Citações vs Notas Internas (Provenance)
+    print("Realizando triagem de Observações vs Citações vs Notas Internas...")
+    provenance_keywords = re.compile(
+        r'\b(restrito|restrição|embargo|liberação|sigilo|confidencial|acesso\s+restrito|'
+        r'somente\s+admin|autoriza[çc][aã]o|solicitad[ao]\s+pela?\s+autor[ae])\b',
+        flags=re.IGNORECASE,
+    )
     note_keywords = re.compile(r'\b(acervo|impress[a-z]*|bca|biblioteca)\b', flags=re.IGNORECASE)
     citation_keywords = re.compile(
         r'\b(v\.|n\.|p\.|vol\.|issn|doi|http|https|editora|revista|anais|scielo)\b',
         flags=re.IGNORECASE,
     )
 
+    # Garante que a coluna de provenance existe (admin-only no DSpace por padrão)
+    if 'dc.description.provenance' not in df.columns:
+        df['dc.description.provenance'] = None
+
     if 'dc.description.note' in df.columns and 'dc.identifier.citation' in df.columns:
         for idx, row in df.iterrows():
             note_val = row['dc.description.note']
             cit_val = row['dc.identifier.citation']
 
+            # Usa o texto disponível (note tem prioridade pois citation é cópia do mesmo campo)
+            text = None
             if pd.notna(note_val) and str(note_val).strip() != "":
                 text = str(note_val)
-                if note_keywords.search(text):
-                    df.at[idx, 'dc.description.note'] = text
-                    df.at[idx, 'dc.identifier.citation'] = None
-                elif citation_keywords.search(text):
-                    df.at[idx, 'dc.identifier.citation'] = text
-                    df.at[idx, 'dc.description.note'] = None
             elif pd.notna(cit_val) and str(cit_val).strip() != "":
                 text = str(cit_val)
-                if note_keywords.search(text):
-                    df.at[idx, 'dc.description.note'] = text
-                    df.at[idx, 'dc.identifier.citation'] = None
+
+            if text is None:
+                continue
+
+            if provenance_keywords.search(text):
+                # Nota interna de restrição/embargo → campo admin-only no DSpace
+                df.at[idx, 'dc.description.provenance'] = text
+                df.at[idx, 'dc.description.note'] = None
+                df.at[idx, 'dc.identifier.citation'] = None
+            elif note_keywords.search(text):
+                df.at[idx, 'dc.description.note'] = text
+                df.at[idx, 'dc.identifier.citation'] = None
+            elif citation_keywords.search(text):
+                df.at[idx, 'dc.identifier.citation'] = text
+                df.at[idx, 'dc.description.note'] = None
 
     # 5. Extração de Itens Embargados
     print("Extraindo itens embargados...")
     embargo_mask = pd.notna(df['data_limite_embargo']) | (
-        df['dc.description.note'].str.contains(r'restrito|embargo|liberação', case=False, na=False)
+        df['dc.description.provenance'].str.contains(r'restrito|embargo|liberação', case=False, na=False)
+        | df['dc.description.note'].str.contains(r'restrito|embargo|liberação', case=False, na=False)
     )
 
     embargo_df = df[embargo_mask].copy()
-    embargo_output = embargo_df[['id_origem', 'data_limite_embargo', 'dc.description.note']].copy()
-    embargo_output.rename(columns={'dc.description.note': 'motivo'}, inplace=True)
+    # Consolida o motivo: prefere provenance (nota interna), senão usa note
+    embargo_output = embargo_df[['id_origem', 'data_limite_embargo', 'dc.description.provenance', 'dc.description.note']].copy()
+    embargo_output['motivo'] = embargo_output['dc.description.provenance'].combine_first(embargo_output['dc.description.note'])
+    embargo_output = embargo_output[['id_origem', 'data_limite_embargo', 'motivo']]
     embargo_output.to_csv(embargo_csv, index=False)
     print(f"Exportados {len(embargo_output)} itens embargados para {embargo_csv}")
 

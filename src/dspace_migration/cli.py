@@ -1,4 +1,5 @@
 import sys
+import argparse
 from pathlib import Path
 from dspace_migration.metadata import process_data
 from dspace_migration.pdfs import extract_pdfs
@@ -49,9 +50,15 @@ def check_and_report_issues():
 
 def run_extract_metadata():
     """CLI command to extract metadata and build SAF structure."""
+    parser = argparse.ArgumentParser(description="Extrai metadados e gera pacotes SAF.")
+    parser.add_argument("--limit", type=int, default=None, help="Limita o número de itens processados (para testes)")
+    
+    # We use parse_known_args in case this is called from migrate_all or other contexts with extra args
+    args, _ = parser.parse_known_args()
+
     print("=== [1/2] Extraindo Metadados e Gerando SAF ===")
     try:
-        process_data()
+        process_data(limit=args.limit)
     except Exception as e:
         print(f"✘ Erro fatal na extração de metadados: {e}", file=sys.stderr)
         sys.exit(1)
@@ -59,9 +66,15 @@ def run_extract_metadata():
 
 def run_extract_pdfs():
     """CLI command to extract binary PDF files into SAF directories."""
+    parser = argparse.ArgumentParser(description="Extrai arquivos PDF binários.")
+    parser.add_argument("--limit", type=int, default=None, help="Limita o número de itens processados (para testes)")
+    
+    # We use parse_known_args in case this is called from migrate_all or other contexts with extra args
+    args, _ = parser.parse_known_args()
+
     print("=== [2/2] Extraindo Arquivos PDF Binários ===")
     try:
-        extract_pdfs()
+        extract_pdfs(limit=args.limit)
     except Exception as e:
         print(f"✘ Erro fatal na extração de PDFs: {e}", file=sys.stderr)
         sys.exit(1)

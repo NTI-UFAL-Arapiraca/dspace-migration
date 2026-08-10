@@ -36,6 +36,9 @@ services:
       # from the host machine. This IP range MUST correspond to the 'dspacenet' subnet defined above.
       proxies__P__trusted__P__ipranges: ${proxies__P__trusted__P__ipranges:-172.23.0}
       LOGGING_CONFIG: ${LOGGING_CONFIG:-/dspace/config/log4j2-container.xml}
+      # Oculta dc.description.provenance do público (notas internas de restrição/embargo).
+      # Visível apenas para administradores. Equivale a: metadata.hide.dc.description.provenance = true
+      metadata__P__hide__P__dc__P__description__P__provenance: "true"
     image: "${DOCKER_REGISTRY:-docker.io}/${DOCKER_OWNER:-dspace}/dspace:${DSPACE_VER:-latest-test}"
     depends_on:
     - dspacedb
