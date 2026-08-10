@@ -43,7 +43,8 @@ class MetadataPipelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             saf = root / "saf"
-            embargo_csv = root / "embargo.csv"
+            legacy_embargo_csv = root / "embargoed_items.csv"
+            legacy_embargo_csv.write_text("relatório antigo", encoding="utf-8")
             sql_file = root / "query.sql"
             sql_file.write_text("SELECT 1", encoding="utf-8")
             old_cwd = Path.cwd()
@@ -66,7 +67,6 @@ class MetadataPipelineTests(unittest.TestCase):
                 ):
                     process_data(
                         sql_file=sql_file,
-                        embargo_csv=embargo_csv,
                         saf_bundle_dir=saf,
                     )
             finally:
@@ -117,6 +117,7 @@ class MetadataPipelineTests(unittest.TestCase):
                  if (element, qualifier) == ("contributor", "referee")],
             )
             self.assertEqual("embargo", read_access_policies(saf)[42].access_type)
+            self.assertFalse(legacy_embargo_csv.exists())
 
 
 if __name__ == "__main__":

@@ -54,6 +54,8 @@ class OrganizationTests(unittest.TestCase):
         }
 
         self.assertEqual(configured_paths, mapped_paths)
+        saf_subpaths = [get_saf_subpath(path) for path in mapped_paths]
+        self.assertEqual(len(saf_subpaths), len(set(saf_subpaths)))
 
     def test_fetches_every_api_page(self):
         client = PaginatedClient()
@@ -80,6 +82,21 @@ class OrganizationTests(unittest.TestCase):
     def test_rejects_parent_traversal_in_saf_path(self):
         with self.assertRaisesRegex(ValueError, "inseguro"):
             get_saf_subpath("Raiz > .. > Coleção")
+
+    def test_encodes_a_slash_that_is_part_of_a_collection_name(self):
+        subpath = get_saf_subpath(
+            "Polo / Campus > Arapiraca > Outros > "
+            "Produção Acadêmica(Prof,/Téc.)UFAL-Arap."
+        )
+
+        self.assertEqual(
+            Path(
+                "Arapiraca",
+                "Outros",
+                "Produção Acadêmica(Prof,%2FTéc.)UFAL-Arap.",
+            ),
+            subpath,
+        )
 
     def test_generates_quoted_import_commands_and_returns_count(self):
         with tempfile.TemporaryDirectory() as tmp:

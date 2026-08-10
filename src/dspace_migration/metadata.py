@@ -62,7 +62,6 @@ def fetch_data_from_db(sql_file):
 
 def process_data(
     sql_file=None,
-    embargo_csv="embargoed_items.csv",
     saf_bundle_dir=SAF_BUNDLE_DIR,
     limit=None,
 ):
@@ -70,6 +69,9 @@ def process_data(
         sql_file = DEFAULT_SQL_FILE
 
     print("Iniciando o processamento dos dados de metadados...")
+    # Remove o relatório legado: políticas de acesso agora seguem somente no
+    # manifesto técnico do SAF e são aplicadas diretamente no DSpace.
+    Path("embargoed_items.csv").unlink(missing_ok=True)
 
     sql_path = Path(sql_file)
     if not sql_path.exists():
@@ -198,9 +200,8 @@ def process_data(
                 df.at[idx, 'dc.identifier.citation'] = None
 
     # 5. Identificação de itens embargados/restritos
-    print("Extraindo itens embargados...")
+    print("Identificando políticas de embargo/restrição...")
     access_policies = {}
-    embargo_rows = []
     for row in df.to_dict(orient='records'):
         policy = determine_access_policy(
             row.get('data_limite_embargo'),
@@ -209,18 +210,11 @@ def process_data(
             row.get('dc.description.note'),
         )
         access_policies[row['id_origem']] = policy
-        if policy is not None:
-            embargo_rows.append({
-                'id_origem': row['id_origem'],
-                'data_limite_embargo': row.get('data_limite_embargo'),
-                'motivo': policy.reason,
-            })
-
-    pd.DataFrame(
-        embargo_rows,
-        columns=['id_origem', 'data_limite_embargo', 'motivo'],
-    ).to_csv(embargo_csv, index=False)
-    print(f"Exportados {len(embargo_rows)} itens embargados/restritos para {embargo_csv}")
+    protected_count = sum(policy is not None for policy in access_policies.values())
+    print(
+        f"Identificados {protected_count} itens embargados/restritos; "
+        "as políticas serão aplicadas no DSpace."
+    )
 
     # 6. Carregar mapeamento de cursos
     print("Carregando mapeamento de cursos (map.json)...")

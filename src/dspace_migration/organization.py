@@ -62,16 +62,21 @@ def resolve_collection_for_curso(curso_name: str | None, mapping: dict) -> str |
 def get_saf_subpath(path_str: str) -> Path:
     """
     Converte uma string de caminho para um caminho relativo amigável ao sistema
-    de arquivos. Pula a comunidade raiz (por exemplo, "Polo / Campus").
+    de arquivos. Pula a comunidade raiz (por exemplo, "Polo / Campus") e
+    codifica separadores que façam parte do nome de uma coleção.
     """
     parts = parse_path(path_str)
     relative_parts = parts[1:] if len(parts) > 1 else parts
-    if any(
-        part in {".", ".."} or "/" in part or "\\" in part
-        for part in relative_parts
-    ):
+    if any(part in {".", ".."} or "\x00" in part for part in relative_parts):
         raise ValueError(f"Caminho SAF inseguro ou inválido: {path_str!r}")
-    return Path(*relative_parts)
+
+    # A codificação é reversível e evita colisões: um '%' literal é protegido
+    # antes de '/' e '\\' virarem texto seguro para um único componente.
+    safe_parts = [
+        part.replace("%", "%25").replace("/", "%2F").replace("\\", "%5C")
+        for part in relative_parts
+    ]
+    return Path(*safe_parts)
 
 
 def _fetch_paginated_models(client, url, embedded_name, model_class) -> list:

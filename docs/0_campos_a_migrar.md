@@ -77,7 +77,7 @@ O item e seus metadados continuam no DSpace; a restrição é aplicada aos bitst
 | `autorizar_publicacao = false`, sem data de embargo | Restrição sem prazo | O bitstream fica acessível apenas para administradores. |
 | Observação que indica restrição, sem data | Restrição sem prazo | O bitstream fica acessível apenas para administradores. |
 
-As decisões de acesso são registradas em `saf_bundle/access_policies.json` e resumidas em `embargoed_items.csv`. O comando `apply-embargoes` usa esse manifesto e os `mapfile.txt` para configurar as datas no DSpace. Se essa etapa falhar, o arquivo permanece privado.
+As decisões de acesso são registradas somente no manifesto técnico `saf_bundle/access_policies.json`. O comando `apply-embargoes` usa esse manifesto e os `mapfile.txt` para configurar as datas diretamente no DSpace. Não é gerado um CSV separado de itens embargados. Se essa etapa falhar, o arquivo permanece privado.
 
 ## 7. Estatísticas de Visualização
 
@@ -108,7 +108,6 @@ Uma observação livre pode conter DOI, URL ou dados de periódico e ser classif
 | `saf_bundle/**/item_<id>/dublin_core.xml` | Metadados que serão importados no item. |
 | `saf_bundle/**/item_<id>/contents` | Lista dos bitstreams e, quando necessário, sua restrição inicial. |
 | `saf_bundle/access_policies.json` | Manifesto de embargos e restrições por ID de origem. |
-| `embargoed_items.csv` | Relatório legível dos itens com acesso controlado. |
 | `routing_report.csv` | Curso, coleção de destino e itens sem mapeamento. |
 | `pdf_extraction_issues.csv` | Anomalias de binário, nome, gravação ou conversão PDF/A. |
 | `mapfile.txt` em cada coleção | Relação entre `item_<id>` e handle gerada pelo importador do DSpace. |

@@ -11,7 +11,6 @@ from dspace_migration.statistics import inject_statistics
 def check_and_report_issues():
     """Verifica e exibe alertas caso existam relatórios de anomalias/erros gerados."""
     issues_csv = Path("pdf_extraction_issues.csv")
-    embargo_csv = Path("embargoed_items.csv")
     routing_csv = Path("routing_report.csv")
 
     has_alerts = False
@@ -20,13 +19,6 @@ def check_and_report_issues():
     print("======================================================================")
     print("                RELATÓRIO AUDITORIA FINAL DA MIGRAÇÃO                 ")
     print("======================================================================")
-
-    if embargo_csv.exists():
-        lines = embargo_csv.read_text(encoding="utf-8").splitlines()
-        count = max(0, len(lines) - 1)
-        if count > 0:
-            print(f"  🔒 Itens com Restrição/Embargo de Acesso: {count}")
-            print(f"     ➔ Consulte o arquivo: {embargo_csv.resolve()}")
 
     if routing_csv.exists():
         lines = routing_csv.read_text(encoding="utf-8").splitlines()

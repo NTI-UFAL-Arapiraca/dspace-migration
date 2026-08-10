@@ -38,7 +38,7 @@ Execute o comando:
 uv run extract-metadata
 ```
 
-*Os itens com restrição/embargo de acesso serão exportados para o arquivo `embargoed_items.csv` para referência. Uma data de embargo igual ou anterior ao dia da extração é considerada vencida.*
+*Os itens com restrição/embargo permanecem no pacote SAF e serão importados no DSpace com o PDF protegido. Uma data de embargo igual ou anterior ao dia da extração é considerada vencida. Não é gerado um CSV separado desses itens.*
 *O relatório de roteamento será exportado para `routing_report.csv`, indicando para qual coleção cada publicação foi direcionada.*
 
 > [!NOTE]
@@ -59,6 +59,8 @@ uv run extract-pdfs
 Para itens embargados ou restritos, cada linha de `contents` recebe uma permissão de leitura exclusiva do grupo `Administrator`. Assim, o PDF já entra privado no DSpace, antes da configuração da data de liberação.
 
 *Os diretórios de item são buscados recursivamente dentro do `saf_bundle/`, compatível com a estrutura hierárquica.*
+
+Quando o nome de uma coleção contém uma barra literal, ela é codificada somente no nome do diretório SAF (`/` vira `%2F`). O nome da coleção criado no DSpace permanece inalterado.
 
 ## 4. Executando somente as duas extrações em sequência
 
