@@ -4,7 +4,7 @@ Este projeto automatiza o processo de extração, limpeza, transformação de me
 
 ---
 
-## 🎯 Objetivo e Contexto
+## Objetivo e Contexto
 
 A base de origem é composta por cerca de 40.000 registros mantidos pela Biblioteca Universitária. A migração foi dividida em etapas automatizadas:
 1. **Higienização de Metadados e Estruturação SAF**: Limpeza de HTML, padronização de datas, triagem de observações vs citações e geração dos arquivos de metadados XML (`dublin_core.xml`).
@@ -15,7 +15,7 @@ A base de origem é composta por cerca de 40.000 registros mantidos pela Bibliot
 
 ---
 
-## 📦 Estrutura do Pacote e Comandos CLI (`uv`)
+## Estrutura do Pacote e Comandos CLI (`uv`)
 
 O projeto é empacotado via **`uv`** com código estruturado em `src/dspace_migration/`.
 
@@ -33,7 +33,7 @@ O projeto é empacotado via **`uv`** com código estruturado em `src/dspace_migr
 
 ---
 
-## 📁 Estrutura de Arquivos
+## Estrutura de Arquivos
 
 - **`src/dspace_migration/`**: Código-fonte do pacote Python.
   - `metadata.py` — Extração e higienização de metadados, geração SAF hierárquica.
@@ -52,7 +52,7 @@ O projeto é empacotado via **`uv`** com código estruturado em `src/dspace_migr
 
 ---
 
-## 🚀 Como Executar o Pipeline
+## Como Executar o Pipeline
 
 Consulte o guia completo passo a passo na pasta [`docs/`](docs/):
 
@@ -70,7 +70,7 @@ uv run python -m unittest discover -s tests -v
 
 ---
 
-## 🔗 Links Úteis e Referências
+## Links Úteis e Referências
 
 - [Documentação Oficial DSpace](https://dspace.org/)
 - [DSpace Simple Archive Format (SAF) Spec](https://wiki.lyrasis.org/pages/viewpage.action?pageId=104566653)
