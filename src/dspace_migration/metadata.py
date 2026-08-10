@@ -99,8 +99,11 @@ def process_data(
         if pd.isna(val):
             return val
         # Remove tags HTML, depois faz unescape de entidades (&amp; → &, &lt; → <, etc.)
-        cleaned = html_pattern.sub('', str(val)).strip()
-        cleaned = html_module.unescape(cleaned).strip()
+        cleaned = html_pattern.sub('', str(val))
+        cleaned = html_module.unescape(cleaned)
+        # Colapsa quebras de linha (\r\n, \r, \n) e espaços redundantes em espaço único
+        cleaned = re.sub(r'[\r\n]+', ' ', cleaned)
+        cleaned = re.sub(r'[ \t]+', ' ', cleaned).strip()
         # Retorna None se o conteúdo ficou vazio após limpeza
         return cleaned if cleaned else None
 
