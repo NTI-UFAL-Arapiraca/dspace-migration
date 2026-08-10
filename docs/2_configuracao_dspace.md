@@ -48,7 +48,7 @@ docker compose -p d10 -f cli.yml run --rm dspace-cli create-administrator -e tes
 
 ## 5. Registrar Campos de Metadados Customizados
 
-Alguns metadados exigidos pela migração (como `dc.description.degree`, `dc.description.note`, `dc.contributor.coadvisor`, etc.) não vêm nativamente no esquema padrão do DSpace e precisam ser cadastrados.
+Alguns metadados exigidos pela migração (como `dc.description.degree`, `dc.description.note`, `dc.contributor.coadvisor` e `dc.contributor.referee`) não vêm nativamente no esquema padrão do DSpace e precisam ser cadastrados.
 
 Na raiz do repositório da migração, execute o script em `scripts/register_custom_fields.sh` para injetar estes campos no banco de dados do DSpace:
 

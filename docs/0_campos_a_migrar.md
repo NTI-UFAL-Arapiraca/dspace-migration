@@ -28,6 +28,7 @@ O fluxo parte do banco PostgreSQL legado `biblioteca`, gera um pacote SAF e impo
 | Autores | `ud_biblioteca_publicacao_autores` → `ud_biblioteca_publicacao_autor` (`ultimo_nome`, `name`) | `dc.contributor.author` | `Sobrenome, Nome`; um valor por autor. |
 | Orientadores | `publicacao_orientador_rel` → `ud_biblioteca_publicacao_orientador` (`ultimo_nome`, `name`) | `dc.contributor.advisor` | `Sobrenome, Nome`; um valor por orientador. |
 | Coorientadores | `publicacao_coorientador_rel` → `ud_biblioteca_publicacao_orientador` (`ultimo_nome`, `name`) | `dc.contributor.coadvisor` | `Sobrenome, Nome`; um valor por coorientador. |
+| Membros avaliadores da banca | `publicacao_membro_banca_rel` → `ud_biblioteca_publicacao_orientador` (`ultimo_nome`, `name`) | `dc.contributor.referee` | `Sobrenome, Nome`; um valor por avaliador. |
 
 Os valores múltiplos são agregados pela consulta SQL com o separador interno `||` e voltam a ser separados na geração do `dublin_core.xml`.
 
@@ -94,7 +95,6 @@ Os campos abaixo apareciam em versões anteriores deste documento como desejáve
 
 - grau acadêmico (`dc.type.degree`);
 - instituição e local de defesa (`dc.publisher` e `dc.publisher.place`);
-- membros da banca (`dc.contributor.committee`);
 - DOI estruturado (`dc.identifier.doi`);
 - nome do periódico (`dc.relation.ispartof`);
 - URL estruturada da publicação original (`dc.identifier.uri`).

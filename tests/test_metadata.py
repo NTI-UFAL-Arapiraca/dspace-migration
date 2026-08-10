@@ -33,6 +33,7 @@ class MetadataPipelineTests(unittest.TestCase):
             "dc.contributor.author": "Silva, Ana||Souza, Beto",
             "dc.contributor.advisor": None,
             "dc.contributor.coadvisor": None,
+            "dc.contributor.referee": "Lima, Carla||Melo, Daniel",
             "dc.subject": "Dados||Migração",
         }])
 
@@ -103,6 +104,11 @@ class MetadataPipelineTests(unittest.TestCase):
                 ["Silva, Ana", "Souza, Beto"],
                 [value for element, qualifier, _, value in values
                  if (element, qualifier) == ("contributor", "author")],
+            )
+            self.assertEqual(
+                ["Lima, Carla", "Melo, Daniel"],
+                [value for element, qualifier, _, value in values
+                 if (element, qualifier) == ("contributor", "referee")],
             )
             self.assertEqual("embargo", read_access_policies(saf)[42].access_type)
 

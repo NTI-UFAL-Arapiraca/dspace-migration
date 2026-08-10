@@ -36,7 +36,7 @@ FROM (
         ('publisher', 'department', 'Departamento, Campus ou Centro de Ensino responsável pela publicação/defesa.'),
         ('contributor', 'advisor', 'Nome do Orientador do trabalho acadêmico (Formato: Sobrenome, Nome).'),
         ('contributor', 'coadvisor', 'Nome do Coorientador do trabalho acadêmico (Formato: Sobrenome, Nome).'),
-        ('contributor', 'committee', 'Membros da Banca Examinadora e avaliadores de defesa do trabalho.'),
+        ('contributor', 'referee', 'Membro avaliador da banca examinadora (Formato: Sobrenome, Nome).'),
         ('description', 'note', 'Notas sobre localização de acervo físico, observações internas ou notas gerais.'),
         ('publisher', 'place', 'Localidade (Cidade e Estado da Federação) da defesa ou publicação.'),
         ('type', 'degree', 'Nível ou tipo do grau acadêmico obtido (ex: Graduação, Mestrado, Doutorado).')

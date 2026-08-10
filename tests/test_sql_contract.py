@@ -22,6 +22,15 @@ class MetadataSqlContractTests(unittest.TestCase):
 
         self.assertIn("ORDER BY p.id", query)
 
+    def test_query_extracts_referees_from_examination_board_relation(self):
+        query = (PROJECT_ROOT / "sql" / "extract_metadata.sql").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("FROM publicacao_membro_banca_rel", query)
+        self.assertIn("pmb.ud_biblioteca_publicacao_id = p.id", query)
+        self.assertIn('AS "dc.contributor.referee"', query)
+
 
 if __name__ == "__main__":
     unittest.main()

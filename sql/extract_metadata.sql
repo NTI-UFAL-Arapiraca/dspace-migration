@@ -46,6 +46,16 @@ SELECT
         WHERE pco.ud_biblioteca_publicacao_id = p.id
     ) AS "dc.contributor.coadvisor",
     (
+        SELECT string_agg(
+            CONCAT(banca.ultimo_nome, ', ', banca.name),
+            '||' ORDER BY banca.ultimo_nome, banca.name, banca.id
+        )
+        FROM publicacao_membro_banca_rel pmb
+        JOIN ud_biblioteca_publicacao_orientador banca
+          ON banca.id = pmb.ud_biblioteca_publicacao_orientador_id
+        WHERE pmb.ud_biblioteca_publicacao_id = p.id
+    ) AS "dc.contributor.referee",
+    (
         SELECT string_agg(pc.name, '||')
         FROM publicacao_p_chave_rel pcr
         JOIN ud_biblioteca_p_chave pc ON pc.id = pcr.ud_biblioteca_p_chave_id
