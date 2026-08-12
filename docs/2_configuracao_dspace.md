@@ -25,7 +25,26 @@ Abra o arquivo `docker-compose-rest.yml` e, dentro do serviço `dspace`, localiz
 > [!NOTE]
 > Substitua `/mnt/part2/saf_bundle` pelo caminho absoluto exato onde o seu pacote SAF foi gerado na máquina host.
 
-## 3. Configurar o Frontend e o Tema
+## 3. Configurar os Formulários do Backend
+
+O arquivo `dspace-docker/backend/config/submission-forms.xml` foi extraído da
+imagem oficial e é montado em `/dspace/config/submission-forms.xml` pelos
+serviços REST e CLI. Nele, `dc.description.abstract` está configurado como
+repetível nos formulários `traditionalpagetwo` e
+`openairePublicationPagetwoForm`.
+
+Cada definição também habilita o seletor de idioma por meio de:
+
+```xml
+<language value-pairs-name="common_iso_languages">true</language>
+<repeatable>true</repeatable>
+```
+
+A lista `common_iso_languages` contém `pt_BR`, compatível com o idioma gravado
+pela migração, e `en`. Alterações nesse XML exigem a recriação do container
+`dspace`, mas não a reconstrução da imagem.
+
+## 4. Configurar o Frontend e o Tema
 
 O frontend é compilado por `dspace-docker/Dockerfile.angular`. Ele usa o código
 fonte presente na imagem oficial `dspace/dspace-angular:dspace-10_x`, sobrepõe
@@ -55,7 +74,7 @@ docker compose -p d10 -f docker-compose-dist.yml -f docker-compose-rest.yml \
 Alterações apenas em `frontend/config/config.prod.yml` não exigem compilação;
 recrie o container com `--force-recreate`.
 
-## 4. Iniciar os Containers do DSpace
+## 5. Iniciar os Containers do DSpace
 
 Faça o pull das imagens do backend, compile o frontend e inicie os serviços:
 
@@ -71,7 +90,7 @@ docker compose -p d10 -f docker-compose-dist.yml -f docker-compose-rest.yml up -
 - **Interface do Usuário (UI):** `http://localhost:4000/`
 - **API REST:** `http://localhost:8080/server/`
 
-## 5. Criar Conta de Administrador
+## 6. Criar Conta de Administrador
 
 Para realizar a importação de dados, crie uma conta de administrador rodando o comando a seguir:
 
@@ -79,7 +98,7 @@ Para realizar a importação de dados, crie uma conta de administrador rodando o
 docker compose -p d10 -f cli.yml run --rm dspace-cli create-administrator -e test@test.edu -f admin -l user -p admin -c en
 ```
 
-## 6. Registrar Campos de Metadados Customizados
+## 7. Registrar Campos de Metadados Customizados
 
 Alguns metadados exigidos pela migração (como `dc.description.degree`, `dc.description.note`, `dc.contributor.coadvisor` e `dc.contributor.referee`) não vêm nativamente no esquema padrão do DSpace e precisam ser cadastrados.
 

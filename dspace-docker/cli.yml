@@ -37,6 +37,8 @@ services:
     volumes:
     # Keep DSpace assetstore directory between reboots
     - assetstore:/dspace/assetstore
+    # Keep CLI validation consistent with the REST backend submission form.
+    - ./backend/config/submission-forms.xml:/dspace/config/submission-forms.xml:ro
 
 volumes:
   assetstore:

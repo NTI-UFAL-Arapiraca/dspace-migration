@@ -8,6 +8,7 @@ DSpace necessária à migração:
 | `docker-compose-rest.yml` | Backend DSpace, PostgreSQL, Solr, volumes persistentes e montagem do pacote SAF. |
 | `docker-compose-dist.yml` | Build e execução da interface DSpace Angular customizada. |
 | `Dockerfile.angular` | Compila o tema local sobre o código-fonte da versão oficial. |
+| `backend/config/submission-forms.xml` | Formulários oficiais do backend com os overrides locais de metadados. |
 | `frontend/themes/custom/` | SCSS, assets e componentes sobrescritos pelo projeto. |
 | `frontend/config/config.prod.yml` | Configuração local carregada em tempo de execução. |
 | `cli.yml` | Comandos administrativos, como criação do administrador e `filter-media`. |
@@ -42,6 +43,21 @@ no `.env`. O tag precisa existir tanto na forma normal quanto com o sufixo
 
 O mesmo nome de projeto (`-p d10`) deve ser usado nos comandos de `cli.yml`,
 pois esse arquivo conecta seus containers à rede e ao volume criados acima.
+
+## Configuração do backend
+
+O `submission-forms.xml` da imagem oficial está versionado em
+`backend/config/` e é montado como somente leitura nos serviços `dspace` e
+`dspace-cli`. As duas definições de `dc.description.abstract` são repetíveis e
+expõem a seleção de idioma do DSpace; a lista inclui explicitamente `pt_BR`,
+usado pela migração, além de `en`.
+
+Depois de alterar essa configuração, recrie o backend:
+
+```bash
+docker compose -p d10 -f docker-compose-dist.yml -f docker-compose-rest.yml \
+  up -d --force-recreate dspace
+```
 
 Consulte [`../docs/2_configuracao_dspace.md`](../docs/2_configuracao_dspace.md)
 para a preparação completa e
