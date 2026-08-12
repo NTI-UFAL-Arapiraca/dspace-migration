@@ -1,0 +1,11 @@
+# Local runtime overrides. The complete defaults remain provided by the
+# version-matched DSpace Angular image.
+
+# Portuguese (Brazil) is used when the browser does not select an active locale.
+fallbackLanguage: pt-BR
+
+# The first matching theme wins. A theme with only a name matches every route,
+# so the locally compiled custom theme is the site-wide default.
+themes:
+  - name: custom
+  - name: dspace

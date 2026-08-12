@@ -1,0 +1,19 @@
+ARG DSPACE_ANGULAR_TAG=dspace-10_x
+
+# The non-dist image contains the matching DSpace Angular source, dependencies,
+# and the official src/themes/custom extension point.
+FROM docker.io/dspace/dspace-angular:${DSPACE_ANGULAR_TAG} AS build
+
+WORKDIR /app
+
+# Merge only locally maintained overrides into the official custom theme. Files
+# not overridden here remain inherited from the version-matched base image.
+COPY frontend/themes/custom/ /app/src/themes/custom/
+
+RUN npm run build:prod
+
+# Keep the official production entrypoint (PM2) and replace only its compiled
+# distribution with the one containing our custom theme.
+FROM docker.io/dspace/dspace-angular:${DSPACE_ANGULAR_TAG}-dist AS runtime
+
+COPY --chown=node:node --from=build /app/dist /app/dist

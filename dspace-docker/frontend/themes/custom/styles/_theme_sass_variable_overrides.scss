@@ -1,0 +1,15 @@
+// Override Bootstrap and DSpace Sass variables before the upstream theme is
+// compiled. Keep institution-specific palette and typography in this file.
+//
+// Examples:
+// $primary: #005c38;
+// $secondary: #6c757d;
+// $font-family-sans-serif: "Open Sans", sans-serif;
+
+@import '../../../styles/_variables.scss';
+
+// Add new semantic colors here. Existing semantic colors should be overridden
+// through their variables above.
+$theme-custom-semantic-colors: (
+);
+$theme-colors: map-merge($theme-colors, $theme-custom-semantic-colors);

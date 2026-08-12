@@ -25,12 +25,45 @@ Abra o arquivo `docker-compose-rest.yml` e, dentro do serviço `dspace`, localiz
 > [!NOTE]
 > Substitua `/mnt/part2/saf_bundle` pelo caminho absoluto exato onde o seu pacote SAF foi gerado na máquina host.
 
-## 3. Iniciar os Containers do DSpace
+## 3. Configurar o Frontend e o Tema
 
-Faça o pull das imagens e inicie os serviços em segundo plano:
+O frontend é compilado por `dspace-docker/Dockerfile.angular`. Ele usa o código
+fonte presente na imagem oficial `dspace/dspace-angular:dspace-10_x`, sobrepõe
+os arquivos mantidos em `frontend/themes/custom/` e executa o build de
+produção. Dessa forma, o projeto mantém somente suas diferenças em vez de uma
+cópia completa do repositório DSpace Angular.
+
+O arquivo `frontend/config/config.prod.yml` é montado no container e carregado
+por `DSPACE_APP_CONFIG_PATH`. Ele ativa o tema `custom` globalmente e pode
+sobrescrever qualquer configuração de runtime. Variáveis de ambiente do
+Compose continuam com prioridade sobre o YAML.
+
+Use os diretórios abaixo para personalização:
+
+- `frontend/themes/custom/styles/`: cores, fontes, variáveis e CSS global;
+- `frontend/themes/custom/assets/`: logotipos, favicons, fontes e traduções;
+- `frontend/themes/custom/app/`: componentes Angular sobrescritos, mantendo o
+  mesmo caminho do template `src/themes/custom` da versão oficial.
+
+Após alterar tema, assets ou componentes, reconstrua o serviço:
 
 ```bash
-docker compose -f docker-compose-dist.yml -f docker-compose-rest.yml pull
+docker compose -p d10 -f docker-compose-dist.yml -f docker-compose-rest.yml \
+  up -d --build dspace-angular
+```
+
+Alterações apenas em `frontend/config/config.prod.yml` não exigem compilação;
+recrie o container com `--force-recreate`.
+
+## 4. Iniciar os Containers do DSpace
+
+Faça o pull das imagens do backend, compile o frontend e inicie os serviços:
+
+```bash
+docker compose -p d10 -f docker-compose-dist.yml -f docker-compose-rest.yml \
+  pull dspace dspacedb dspacesolr
+docker compose -p d10 -f docker-compose-dist.yml -f docker-compose-rest.yml \
+  build --pull dspace-angular
 docker compose -p d10 -f docker-compose-dist.yml -f docker-compose-rest.yml up -d
 ```
 
@@ -38,7 +71,7 @@ docker compose -p d10 -f docker-compose-dist.yml -f docker-compose-rest.yml up -
 - **Interface do Usuário (UI):** `http://localhost:4000/`
 - **API REST:** `http://localhost:8080/server/`
 
-## 4. Criar Conta de Administrador
+## 5. Criar Conta de Administrador
 
 Para realizar a importação de dados, crie uma conta de administrador rodando o comando a seguir:
 
@@ -46,7 +79,7 @@ Para realizar a importação de dados, crie uma conta de administrador rodando o
 docker compose -p d10 -f cli.yml run --rm dspace-cli create-administrator -e test@test.edu -f admin -l user -p admin -c en
 ```
 
-## 5. Registrar Campos de Metadados Customizados
+## 6. Registrar Campos de Metadados Customizados
 
 Alguns metadados exigidos pela migração (como `dc.description.degree`, `dc.description.note`, `dc.contributor.coadvisor` e `dc.contributor.referee`) não vêm nativamente no esquema padrão do DSpace e precisam ser cadastrados.
 
