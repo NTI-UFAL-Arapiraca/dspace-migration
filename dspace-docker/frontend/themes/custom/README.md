@@ -11,6 +11,10 @@ Arquivos mantidos inicialmente:
 - `styles/_global-styles.scss`: regras CSS globais adicionais;
 - `assets/`: logotipos, favicons, fontes e traduções próprias.
 
+O componente `app/home-page/home-news/home-news.component.ts` mantém a extensão
+oficial registrada, mas usa um template vazio para remover da página inicial o
+banner promocional padrão do DSpace.
+
 Para substituir um componente, crie neste diretório o mesmo caminho existente
 em `src/themes/custom` da versão `dspace-10_x`. Por exemplo, um cabeçalho pode
 ser sobrescrito em `app/header/`. O caminho e as importações devem acompanhar a

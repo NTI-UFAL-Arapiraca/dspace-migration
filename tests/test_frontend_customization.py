@@ -40,6 +40,16 @@ class FrontendCustomizationTests(unittest.TestCase):
         self.assertLess(custom_position, fallback_position)
         self.assertIn("fallbackLanguage: pt-BR", config)
 
+    def test_custom_theme_suppresses_stock_home_news_banner(self):
+        component = (
+            DOCKER_ROOT
+            / "frontend/themes/custom/app/home-page/home-news/home-news.component.ts"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("export class HomeNewsComponent extends BaseComponent", component)
+        self.assertIn("template: ''", component)
+        self.assertNotIn("world leading open source repository", component)
+
 
 if __name__ == "__main__":
     unittest.main()
