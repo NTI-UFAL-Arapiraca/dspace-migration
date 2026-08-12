@@ -6,11 +6,15 @@ FROM docker.io/dspace/dspace-angular:${DSPACE_ANGULAR_TAG} AS build
 
 WORKDIR /app
 
-# Merge only locally maintained overrides into the official custom theme. Files
-# not overridden here remain inherited from the version-matched base image.
-COPY frontend/themes/custom/ /app/src/themes/custom/
+# Merge the locally maintained theme and its component registries into the
+# official source tree. Files not overridden here remain inherited from the
+# version-matched base image.
+COPY frontend/themes/ /app/src/themes/
 
-RUN npm run build:prod
+# Merge the labels maintained by the custom theme into the standard language
+# bundles before Angular calculates their production hashes.
+RUN npm run merge-i18n -- -s src/themes/custom/assets/i18n \
+    && npm run build:prod
 
 # Keep the official production entrypoint (PM2) and replace only its compiled
 # distribution with the one containing our custom theme.
