@@ -12,18 +12,31 @@ cd dspace-docker
 
 ## 2. Configurar o Volume do SAF Bundle
 
-Para que o container do DSpace consiga ler os arquivos gerados pela extração, você deve adicionar o mapeamento de volume no arquivo `docker-compose-rest.yml` (ou `docker/docker-compose-rest.yml`).
-
-Abra o arquivo `docker-compose-rest.yml` e, dentro do serviço `dspace`, localize a seção `volumes`. Adicione a linha correspondente ao diretório do `saf_bundle`:
+Para que o container do DSpace consiga ler os arquivos gerados pela extração,
+o `docker-compose-rest.yml` monta o pacote no caminho `/dspace/saf_bundle`:
 
 ```yaml
-    volumes:
-      # Keep DSpace assetstore directory between reboots
-      - assetstore:/dspace/assetstore
-      - /mnt/part2/saf_bundle:/dspace/saf_bundle
+- ${DSPACE_SAF_HOST_DIR:-${SAF_BUNDLE_DIR:-../saf_bundle}}:/dspace/saf_bundle
 ```
+
+O padrão corresponde ao diretório `saf_bundle/` na raiz do projeto e não
+precisa de configuração adicional. O Compose reutiliza `SAF_BUNDLE_DIR` quando
+`DSPACE_SAF_HOST_DIR` não está definida. Se quiser declarar ambos, use o mesmo
+caminho absoluto e passe o arquivo ao Compose:
+
+```dotenv
+SAF_BUNDLE_DIR=/mnt/part2/saf_bundle
+DSPACE_SAF_HOST_DIR=/mnt/part2/saf_bundle
+```
+
+```bash
+docker compose --env-file ../.env -p d10 \
+  -f docker-compose-dist.yml -f docker-compose-rest.yml up -d
+```
+
 > [!NOTE]
-> Substitua `/mnt/part2/saf_bundle` pelo caminho absoluto exato onde o seu pacote SAF foi gerado na máquina host.
+> Os dois caminhos devem identificar o mesmo diretório do host. Caso contrário,
+> o importador não encontrará os arquivos gerados pela migração.
 
 ## 3. Configurar os Formulários do Backend
 

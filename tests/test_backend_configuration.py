@@ -20,6 +20,20 @@ class BackendConfigurationTests(unittest.TestCase):
                 compose = (DOCKER_ROOT / compose_file).read_text(encoding="utf-8")
                 self.assertIn(expected_mount, compose)
 
+    def test_rest_compose_mounts_configurable_saf_bundle(self):
+        compose = (DOCKER_ROOT / "docker-compose-rest.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn(
+            (
+                "${DSPACE_SAF_HOST_DIR:-${SAF_BUNDLE_DIR:-../saf_bundle}}:"
+                "/dspace/saf_bundle"
+            ),
+            compose,
+        )
+        self.assertNotIn("/mnt/part2/saf_bundle", compose)
+
     def test_every_abstract_field_is_repeatable_and_language_qualified(self):
         root = ET.parse(SUBMISSION_FORMS).getroot()
         configured_forms = []

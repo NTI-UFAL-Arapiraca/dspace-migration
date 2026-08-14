@@ -44,6 +44,11 @@ no `.env`. O tag precisa existir tanto na forma normal quanto com o sufixo
 O mesmo nome de projeto (`-p d10`) deve ser usado nos comandos de `cli.yml`,
 pois esse arquivo conecta seus containers à rede e ao volume criados acima.
 
+O serviço REST monta `../saf_bundle` por padrão e reutiliza `SAF_BUNDLE_DIR` se
+ela estiver definida. `DSPACE_SAF_HOST_DIR` permite sobrescrever somente o
+mount; nesse caso, seu caminho deve identificar o mesmo diretório usado pela
+migração.
+
 ## Configuração do backend
 
 O `submission-forms.xml` da imagem oficial está versionado em

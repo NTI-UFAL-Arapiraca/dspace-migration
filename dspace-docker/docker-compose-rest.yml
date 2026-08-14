@@ -50,7 +50,9 @@ services:
     volumes:
     # Keep DSpace assetstore directory between reboots
     - assetstore:/dspace/assetstore
-    - /mnt/part2/saf_bundle:/dspace/saf_bundle
+    # DSPACE_SAF_HOST_DIR permite sobrescrever o mount; se ausente, reutiliza
+    # SAF_BUNDLE_DIR. Sem nenhuma das variáveis, usa saf_bundle/ na raiz.
+    - ${DSPACE_SAF_HOST_DIR:-${SAF_BUNDLE_DIR:-../saf_bundle}}:/dspace/saf_bundle
     # Submission form override maintained by this project. It allows one
     # abstract per language instead of replacing the previous value.
     - ./backend/config/submission-forms.xml:/dspace/config/submission-forms.xml:ro

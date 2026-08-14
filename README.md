@@ -15,6 +15,122 @@ A base de origem é composta por cerca de 40.000 registros mantidos pela Bibliot
 
 ---
 
+## Quickstart
+
+O `uv run migrate` executa o pipeline de dados, mas **não** instala nem inicia o
+Docker, não restaura o banco de origem, não cria o administrador do DSpace e
+não cadastra os campos customizados. Em uma instalação limpa, execute os passos
+abaixo a partir da raiz do repositório.
+
+### 1. Preparar o ambiente
+
+São necessários Docker com o plugin Compose, `uv` e as portas `4000`, `5432`,
+`5440`, `8080` e `8983` livres.
+
+```bash
+cp .env.example .env
+uv sync
+mkdir -p saf_bundle
+```
+
+Revise o `.env`, principalmente as credenciais `DB_*` do PostgreSQL de origem
+e `DSPACE_API_USER`/`DSPACE_API_PASSWORD`. O diretório `SAF_BUNDLE_DIR` deve ser
+o mesmo montado no container DSpace. Com o valor padrão `saf_bundle`, isso já é
+feito automaticamente. Para usar outro disco, configure ambos com o mesmo
+caminho absoluto:
+
+```dotenv
+SAF_BUNDLE_DIR=/caminho/absoluto/saf_bundle
+DSPACE_SAF_HOST_DIR=/caminho/absoluto/saf_bundle
+```
+
+### 2. Disponibilizar o banco de origem
+
+Se o PostgreSQL legado já estiver acessível pelas variáveis `DB_*`, pule este
+passo. Para usar o banco local definido em `biblioteca-compose.yml`, coloque os
+dumps esperados em `dumps/` e restaure-os com:
+
+```bash
+./scripts/init-db.sh
+```
+
+O script inicia o PostgreSQL na porta `5440` e restaura os dumps cujos nomes
+estão definidos em `scripts/init-db.sh`. Ajuste esses nomes se os arquivos forem
+diferentes. Se o volume já estiver restaurado, basta iniciá-lo:
+
+```bash
+docker compose -p biblioteca-migracao -f biblioteca-compose.yml up -d
+```
+
+### 3. Iniciar o DSpace
+
+```bash
+cd dspace-docker
+docker compose --env-file ../.env -p d10 \
+  -f docker-compose-dist.yml -f docker-compose-rest.yml \
+  up -d --build
+```
+
+Esse comando inicia o frontend, a API REST, o PostgreSQL e o Solr. Aguarde a
+API responder antes de continuar:
+
+```bash
+curl --fail http://localhost:8080/server/api
+```
+
+Em seguida, ainda em `dspace-docker/`, crie o administrador com as mesmas
+credenciais configuradas em `DSPACE_API_USER` e `DSPACE_API_PASSWORD`. O
+exemplo abaixo corresponde aos valores padrão do `.env.example`:
+
+```bash
+docker compose --env-file ../.env -p d10 -f cli.yml run --rm \
+  dspace-cli create-administrator \
+  -e test@test.edu -f admin -l user -p admin -c pt_BR
+```
+
+### 4. Cadastrar os campos customizados
+
+Volte à raiz do repositório e execute o cadastro idempotente dos campos usados
+pela migração, incluindo orientador, coorientador e membros da banca:
+
+```bash
+cd ..
+./scripts/register_custom_fields.sh dspacedb
+```
+
+### 5. Executar a migração completa
+
+```bash
+uv run migrate
+```
+
+O comando realiza, nesta ordem:
+
+1. extração, limpeza e geração dos metadados SAF;
+2. extração e conversão dos PDFs;
+3. criação/reutilização das comunidades e coleções pela API REST;
+4. geração e execução de `import_all.sh` dentro do container `dspace`;
+5. aplicação das políticas de embargo aos bitstreams;
+6. injeção das estatísticas históricas no Solr.
+
+Ao terminar, revise `routing_report.csv`, `pdf_extraction_issues.csv` (se
+existir) e um item bilíngue na interface em `http://localhost:4000`. Para gerar
+miniaturas e texto indexável dos PDFs, execute:
+
+```bash
+cd dspace-docker
+docker compose --env-file ../.env -p d10 -f cli.yml run --rm \
+  dspace-cli filter-media
+```
+
+> [!IMPORTANT]
+> `uv run migrate` adiciona itens. Não execute novamente contra o mesmo banco
+> DSpace depois de uma importação bem-sucedida, pois isso pode criar duplicatas.
+> Uma nova execução completa é apropriada quando os volumes do DSpace foram
+> removidos e a instância está vazia.
+
+---
+
 ## Estrutura do Pacote e Comandos CLI (`uv`)
 
 O projeto é empacotado via **`uv`** com código estruturado em `src/dspace_migration/`.
