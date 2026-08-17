@@ -9,6 +9,30 @@ SUBMISSION_FORMS = DOCKER_ROOT / "backend/config/submission-forms.xml"
 
 
 class BackendConfigurationTests(unittest.TestCase):
+    def test_all_official_images_default_to_stable_dspace_10(self):
+        rest_compose = (DOCKER_ROOT / "docker-compose-rest.yml").read_text(
+            encoding="utf-8"
+        )
+        cli_compose = (DOCKER_ROOT / "cli.yml").read_text(encoding="utf-8")
+        frontend_compose = (DOCKER_ROOT / "docker-compose-dist.yml").read_text(
+            encoding="utf-8"
+        )
+        dockerfile = (DOCKER_ROOT / "Dockerfile.angular").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("dspace:${DSPACE_VER:-dspace-10.0}", rest_compose)
+        self.assertIn("dspace-solr:${DSPACE_VER:-dspace-10.0}", rest_compose)
+        self.assertIn("dspace-cli:${DSPACE_VER:-dspace-10.0}", cli_compose)
+        self.assertEqual(2, frontend_compose.count("${DSPACE_ANGULAR_TAG:-dspace-10.0}"))
+        self.assertIn("ARG DSPACE_ANGULAR_TAG=dspace-10.0", dockerfile)
+
+        all_dspace_config = "\n".join(
+            (rest_compose, cli_compose, frontend_compose, dockerfile)
+        )
+        self.assertNotIn("latest-test", all_dspace_config)
+        self.assertNotIn("DSPACE_VER:-latest", all_dspace_config)
+
     def test_compose_mounts_submission_forms_in_rest_and_cli(self):
         expected_mount = (
             "./backend/config/submission-forms.xml:"

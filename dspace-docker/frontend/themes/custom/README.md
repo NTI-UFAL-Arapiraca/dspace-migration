@@ -23,7 +23,7 @@ oficial registrada, mas usa um template vazio para remover da página inicial o
 banner promocional padrão do DSpace.
 
 Para substituir um componente, crie neste diretório o mesmo caminho existente
-em `src/themes/custom` da versão `dspace-10_x`. Por exemplo, um cabeçalho pode
+em `src/themes/custom` da versão `dspace-10.0`. Por exemplo, um cabeçalho pode
 ser sobrescrito em `app/header/`. O caminho e as importações devem acompanhar a
 mesma versão definida por `DSPACE_ANGULAR_TAG`.
 
