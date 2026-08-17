@@ -72,6 +72,30 @@ class FrontendCustomizationTests(unittest.TestCase):
         self.assertIn("'item.page.advisor'", template)
         self.assertIn("'item.page.referees'", template)
 
+    def test_untyped_item_justifies_only_the_abstract_field(self):
+        component_dir = (
+            DOCKER_ROOT
+            / "frontend/themes/custom/app/item-page/simple/item-types/untyped-item"
+        )
+        template = (component_dir / "untyped-item.component.html").read_text(
+            encoding="utf-8"
+        )
+        component = (component_dir / "untyped-item.component.ts").read_text(
+            encoding="utf-8"
+        )
+        styles = (component_dir / "untyped-item.component.scss").read_text(
+            encoding="utf-8"
+        )
+
+        abstract_start = template.index("<ds-item-page-abstract-field")
+        abstract_end = template.index("</ds-item-page-abstract-field>", abstract_start)
+        abstract_markup = template[abstract_start:abstract_end]
+
+        self.assertIn('class="document-abstract"', abstract_markup)
+        self.assertIn("'./untyped-item.component.scss'", component)
+        self.assertIn(".document-abstract", styles)
+        self.assertIn("text-align: justify", styles)
+
     def test_custom_component_registries_are_enabled(self):
         eager = (
             DOCKER_ROOT / "frontend/themes/eager-themes-components.ts"

@@ -1,0 +1,5 @@
+// text-align is inherited by the metadata and Markdown elements rendered by
+// the abstract component, keeping the rule scoped to this field only.
+.document-abstract {
+  text-align: justify;
+}
