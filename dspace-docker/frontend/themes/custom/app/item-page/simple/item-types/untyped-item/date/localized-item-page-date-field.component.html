@@ -1,0 +1,9 @@
+<div class="item-page-field">
+  @if (dateValues$ | async; as dateValues) {
+    <ds-metadata-values
+      [mdValues]="dateValues"
+      [separator]="separator"
+      [label]="label">
+    </ds-metadata-values>
+  }
+</div>

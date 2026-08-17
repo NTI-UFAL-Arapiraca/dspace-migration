@@ -44,6 +44,19 @@ class FrontendCustomizationTests(unittest.TestCase):
         self.assertLess(custom_position, fallback_position)
         self.assertIn("fallbackLanguage: pt-BR", config)
 
+    def test_anonymous_visitors_default_to_brazilian_portuguese(self):
+        header = (
+            DOCKER_ROOT / "frontend/themes/custom/app/header/header.component.ts"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("DEFAULT_ANONYMOUS_LANGUAGE = 'pt-BR'", header)
+        self.assertIn("getLanguageCodeFromCookie()", header)
+        self.assertIn("isAuthenticationLoaded()", header)
+        self.assertIn("if (!authenticated", header)
+        self.assertIn(
+            "setCurrentLanguageCode(DEFAULT_ANONYMOUS_LANGUAGE)", header
+        )
+
     def test_custom_theme_suppresses_stock_home_news_banner(self):
         component = (
             DOCKER_ROOT
@@ -95,6 +108,30 @@ class FrontendCustomizationTests(unittest.TestCase):
         self.assertIn("'./untyped-item.component.scss'", component)
         self.assertIn(".document-abstract", styles)
         self.assertIn("text-align: justify", styles)
+
+    def test_untyped_item_localizes_issued_date_for_brazilian_portuguese(self):
+        component_dir = (
+            DOCKER_ROOT
+            / "frontend/themes/custom/app/item-page/simple/item-types/untyped-item"
+        )
+        item_component = (component_dir / "untyped-item.component.ts").read_text(
+            encoding="utf-8"
+        )
+        date_component = (
+            component_dir / "date/localized-item-page-date-field.component.ts"
+        ).read_text(encoding="utf-8")
+        date_spec = (
+            component_dir / "date/localized-item-page-date-field.component.spec.ts"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("LocalizedItemPageDateFieldComponent", item_component)
+        self.assertNotIn(
+            "specific-field/date/item-page-date-field.component", item_component
+        )
+        self.assertIn("normalizedLanguage !== 'pt-br'", date_component)
+        self.assertIn("`${day}/${month}/${year}`", date_component)
+        self.assertIn("`${month}/${year}`", date_component)
+        self.assertIn("'2026-02-30'", date_spec)
 
     def test_custom_component_registries_are_enabled(self):
         eager = (
