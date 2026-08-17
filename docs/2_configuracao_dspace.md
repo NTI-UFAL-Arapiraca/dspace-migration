@@ -60,15 +60,15 @@ pela migração, e `en`. Alterações nesse XML exigem a recriação do containe
 ## 4. Configurar o Frontend e o Tema
 
 O frontend é compilado por `dspace-docker/Dockerfile.angular`. Ele usa o código
-fonte presente na imagem oficial `dspace/dspace-angular:dspace-10.0`, sobrepõe
+fonte presente na imagem oficial `dspace/dspace-angular:dspace-10_x`, sobrepõe
 os arquivos mantidos em `frontend/themes/custom/` e executa o build de
 produção. Dessa forma, o projeto mantém somente suas diferenças em vez de uma
 cópia completa do repositório DSpace Angular.
 
-Backend, Solr, CLI, build e runtime Angular usam por padrão o tag estável
-`dspace-10.0`. As variáveis `DSPACE_VER` e `DSPACE_ANGULAR_TAG` permitem mudar
-o tag, mas precisam continuar na mesma versão. Não use `latest` ou
-`latest-test`, pois podem resolver para o DSpace 11.
+Backend, Solr, CLI, build e runtime Angular usam por padrão `dspace-10_x`, com
+as correções mais recentes da linha 10. As variáveis `DSPACE_VER` e
+`DSPACE_ANGULAR_TAG` permitem mudar o tag, mas precisam continuar na mesma
+versão. Não use `latest` ou `latest-test`, pois podem resolver para o DSpace 11.
 
 O arquivo `frontend/config/config.prod.yml` é montado no container e carregado
 por `DSPACE_APP_CONFIG_PATH`. Ele ativa o tema `custom` globalmente e pode

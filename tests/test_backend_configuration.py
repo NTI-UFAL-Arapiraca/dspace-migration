@@ -9,7 +9,7 @@ SUBMISSION_FORMS = DOCKER_ROOT / "backend/config/submission-forms.xml"
 
 
 class BackendConfigurationTests(unittest.TestCase):
-    def test_all_official_images_default_to_stable_dspace_10(self):
+    def test_all_official_images_default_to_latest_dspace_10_line(self):
         rest_compose = (DOCKER_ROOT / "docker-compose-rest.yml").read_text(
             encoding="utf-8"
         )
@@ -21,11 +21,11 @@ class BackendConfigurationTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertIn("dspace:${DSPACE_VER:-dspace-10.0}", rest_compose)
-        self.assertIn("dspace-solr:${DSPACE_VER:-dspace-10.0}", rest_compose)
-        self.assertIn("dspace-cli:${DSPACE_VER:-dspace-10.0}", cli_compose)
-        self.assertEqual(2, frontend_compose.count("${DSPACE_ANGULAR_TAG:-dspace-10.0}"))
-        self.assertIn("ARG DSPACE_ANGULAR_TAG=dspace-10.0", dockerfile)
+        self.assertIn("dspace:${DSPACE_VER:-dspace-10_x}", rest_compose)
+        self.assertIn("dspace-solr:${DSPACE_VER:-dspace-10_x}", rest_compose)
+        self.assertIn("dspace-cli:${DSPACE_VER:-dspace-10_x}", cli_compose)
+        self.assertEqual(2, frontend_compose.count("${DSPACE_ANGULAR_TAG:-dspace-10_x}"))
+        self.assertIn("ARG DSPACE_ANGULAR_TAG=dspace-10_x", dockerfile)
 
         all_dspace_config = "\n".join(
             (rest_compose, cli_compose, frontend_compose, dockerfile)

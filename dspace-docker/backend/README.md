@@ -1,7 +1,7 @@
 # Configuração do backend DSpace
 
 `config/submission-forms.xml` é uma cópia da configuração oficial da branch
-`dspace-10.0` do repositório `DSpace/DSpace`. O arquivo é montado diretamente
+`dspace-10_x` do repositório `DSpace/DSpace`. O arquivo é montado diretamente
 em `/dspace/config/submission-forms.xml` pelos serviços REST e CLI.
 
 Overrides mantidos pelo projeto:

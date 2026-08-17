@@ -1,4 +1,4 @@
-ARG DSPACE_ANGULAR_TAG=dspace-10.0
+ARG DSPACE_ANGULAR_TAG=dspace-10_x
 
 # The non-dist image contains the matching DSpace Angular source, dependencies,
 # and the official src/themes/custom extension point.

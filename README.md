@@ -44,7 +44,8 @@ SAF_BUNDLE_DIR=/caminho/absoluto/saf_bundle
 DSPACE_SAF_HOST_DIR=/caminho/absoluto/saf_bundle
 ```
 
-Backend, Solr, CLI e frontend estão fixados em `dspace-10.0`. Mantenha
+Backend, Solr, CLI e frontend acompanham o tag `dspace-10_x`, que recebe as
+correções mais recentes da linha 10. Mantenha
 `DSPACE_VER` e `DSPACE_ANGULAR_TAG` com o mesmo valor; não use `latest` nem
 `latest-test`, pois esses aliases podem apontar para o DSpace 11.
 

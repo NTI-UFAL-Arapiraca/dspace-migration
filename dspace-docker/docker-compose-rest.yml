@@ -39,7 +39,7 @@ services:
       # Oculta dc.description.provenance do público (notas internas de restrição/embargo).
       # Visível apenas para administradores. Equivale a: metadata.hide.dc.description.provenance = true
       metadata__P__hide__P__dc__P__description__P__provenance: "true"
-    image: "${DOCKER_REGISTRY:-docker.io}/${DOCKER_OWNER:-dspace}/dspace:${DSPACE_VER:-dspace-10.0}"
+    image: "${DOCKER_REGISTRY:-docker.io}/${DOCKER_OWNER:-dspace}/dspace:${DSPACE_VER:-dspace-10_x}"
     depends_on:
     - dspacedb
     networks:
@@ -88,7 +88,7 @@ services:
   # DSpace Solr container
   dspacesolr:
     container_name: dspacesolr
-    image: "${DOCKER_REGISTRY:-docker.io}/${DOCKER_OWNER:-dspace}/dspace-solr:${DSPACE_VER:-dspace-10.0}"
+    image: "${DOCKER_REGISTRY:-docker.io}/${DOCKER_OWNER:-dspace}/dspace-solr:${DSPACE_VER:-dspace-10_x}"
     networks:
       - dspacenet
     ports:
