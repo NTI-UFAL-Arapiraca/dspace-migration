@@ -34,24 +34,31 @@ class FrontendCustomizationTests(unittest.TestCase):
         self.assertIn("dspace-angular:${DSPACE_ANGULAR_TAG}-dist AS runtime", dockerfile)
         self.assertIn("COPY --chown=node:node --from=build /app/dist /app/dist", dockerfile)
 
-    def test_item_requests_keep_all_abstract_languages(self):
+    def test_only_admin_editor_requests_all_metadata_languages(self):
         dockerfile = (DOCKER_ROOT / "Dockerfile.angular").read_text(
             encoding="utf-8"
         )
         patch = (
             DOCKER_ROOT / "frontend/patches/apply-item-all-languages.mjs"
         ).read_text(encoding="utf-8")
+        resolver = (
+            DOCKER_ROOT
+            / "frontend/overrides/edit-item-all-languages.resolver.ts"
+        ).read_text(encoding="utf-8")
 
         self.assertIn("apply-item-all-languages.mjs", dockerfile)
+        self.assertIn("edit-item-all-languages.resolver.ts", dockerfile)
         self.assertLess(
             dockerfile.index("apply-item-all-languages.mjs"),
             dockerfile.index("npm run build:prod"),
         )
-        self.assertEqual(2, patch.count("projection=allLanguages"))
-        self.assertIn("projections: string[] = ['allLanguages']", patch)
+        self.assertEqual(1, patch.count("projection=allLanguages"))
         self.assertIn("constructAllLanguagesEndpoint", patch)
-        self.assertIn("getIDHrefObs(encodeURIComponent(id)", patch)
-        self.assertIn("href.includes('?') ? '&' : '?'", patch)
+        self.assertIn("dso: editItemAllLanguagesResolver", patch)
+        self.assertNotIn("findByCustomUrl", patch)
+        self.assertNotIn("getIDHrefObs", patch)
+        self.assertIn("projection=allLanguages", resolver)
+        self.assertIn("route.parent?.data?.dso", resolver)
         self.assertIn("occurrences !== 1", patch)
 
     def test_runtime_config_activates_custom_theme_first(self):
@@ -65,16 +72,29 @@ class FrontendCustomizationTests(unittest.TestCase):
         self.assertIn("fallbackLanguage: pt-BR", config)
 
     def test_anonymous_visitors_default_to_brazilian_portuguese(self):
-        header = (
-            DOCKER_ROOT / "frontend/themes/custom/app/header/header.component.ts"
+        dockerfile = (DOCKER_ROOT / "Dockerfile.angular").read_text(
+            encoding="utf-8"
+        )
+        patch = (
+            DOCKER_ROOT
+            / "frontend/patches/apply-default-anonymous-language.mjs"
         ).read_text(encoding="utf-8")
+        config = (DOCKER_ROOT / "frontend/config/config.prod.yml").read_text(
+            encoding="utf-8"
+        )
 
-        self.assertIn("DEFAULT_ANONYMOUS_LANGUAGE = 'pt-BR'", header)
-        self.assertIn("getLanguageCodeFromCookie()", header)
-        self.assertIn("isAuthenticationLoaded()", header)
-        self.assertIn("if (!authenticated", header)
-        self.assertIn(
-            "setCurrentLanguageCode(DEFAULT_ANONYMOUS_LANGUAGE)", header
+        self.assertIn("apply-default-anonymous-language.mjs", dockerfile)
+        self.assertIn("/app/src/app/core/locale/locale.service.ts", dockerfile)
+        self.assertLess(
+            dockerfile.index("apply-default-anonymous-language.mjs"),
+            dockerfile.index("npm run build:prod"),
+        )
+        self.assertIn("return of(this.appConfig.fallbackLanguage)", patch)
+        self.assertIn("Browser Accept-Language must not override", patch)
+        self.assertIn("occurrences !== 1", patch)
+        self.assertIn("fallbackLanguage: pt-BR", config)
+        self.assertFalse(
+            (DOCKER_ROOT / "frontend/themes/custom/app/header/header.component.ts").exists()
         )
 
     def test_custom_theme_suppresses_stock_home_news_banner(self):

@@ -17,7 +17,7 @@ class MetadataPipelineTests(unittest.TestCase):
             "id_origem": 42,
             "dc.title": "<b>Trabalho</b> &amp; pesquisa",
             "dc.title.alternative": "Abstract",
-            "dc.description.abstract[pt_BR]": "<i>Mesmo resumo</i>",
+            "dc.description.abstract[pt]": "<i>Mesmo resumo</i>",
             "dc.description.abstract[en]": "<i>Mesmo resumo</i>",
             "dc.date.issued": "2024-05-03",
             # Simula uma consulta antiga/personalizada: o pipeline deve
@@ -86,7 +86,7 @@ class MetadataPipelineTests(unittest.TestCase):
 
             self.assertIn(("title", "none", None, "Trabalho & pesquisa"), values)
             self.assertIn(
-                ("description", "abstract", "pt_BR", "Mesmo resumo"), values
+                ("description", "abstract", "pt", "Mesmo resumo"), values
             )
             self.assertNotIn(
                 ("description", "abstract", "en", "Mesmo resumo"), values

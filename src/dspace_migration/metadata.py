@@ -92,7 +92,7 @@ def process_data(
 
     html_cols = [
         'dc.title',
-        'dc.description.abstract[pt_BR]',
+        'dc.description.abstract[pt]',
         'dc.description.abstract[en]',
         'dc.description.note',
         'dc.identifier.citation',
@@ -114,12 +114,12 @@ def process_data(
         if col in df.columns:
             df[col] = df[col].apply(clean_html)
 
-    # 1b. Deduplicação de abstract: se pt_BR == en (mesmo texto), mantém só pt_BR
+    # 1b. Deduplicação de abstract: se pt == en (mesmo texto), mantém só pt
     print("Deduplicando abstracts bilíngues...")
-    pt_col = 'dc.description.abstract[pt_BR]'
+    pt_col = 'dc.description.abstract[pt]'
     en_col  = 'dc.description.abstract[en]'
     if pt_col in df.columns and en_col in df.columns:
-        # Caso 1: conteúdo idêntico → mantém pt_BR, remove en
+        # Caso 1: conteúdo idêntico → mantém pt, remove en
         same_mask = (
             df[pt_col].notna() & df[en_col].notna()
             & (df[pt_col].str.strip() == df[en_col].str.strip())

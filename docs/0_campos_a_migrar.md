@@ -10,7 +10,7 @@ O fluxo parte do banco PostgreSQL legado `biblioteca`, gera um pacote SAF e impo
 | --- | --- | --- | --- |
 | Título principal | `ud_biblioteca_publicacao.name` | `dc.title` | Remove HTML, entidades HTML e espaços/quebras de linha excedentes. |
 | Título alternativo | `ud_biblioteca_publicacao.titulo_abstract` | `dc.title.alternative` | O valor isolado `Abstract` é descartado por não representar um título. |
-| Resumo em português | `ud_biblioteca_publicacao.resumo` | `dc.description.abstract`, idioma `pt_BR` | Remove HTML e normaliza espaços e quebras de linha. |
+| Resumo em português | `ud_biblioteca_publicacao.resumo` | `dc.description.abstract`, idioma `pt` | Remove HTML e normaliza espaços e quebras de linha. O qualifier usa o idioma-base porque o filtro de metadados do DSpace 10 reduz a locale `pt_BR` para `pt`. |
 | Abstract em inglês | `ud_biblioteca_publicacao.abstract` | `dc.description.abstract`, idioma `en` | Recebe a mesma limpeza. Se for idêntico ao resumo em português, a duplicata em inglês é removida. |
 | Data de defesa | `ud_biblioteca_publicacao.data_defesa` | `dc.date.issued` | Mantida no formato retornado pelo PostgreSQL. `dc.date.submitted` não é gerado pela migração. |
 | Número de páginas | `ud_biblioteca_publicacao.numero_paginas` | `dc.format.extent` | Migrado como texto. |

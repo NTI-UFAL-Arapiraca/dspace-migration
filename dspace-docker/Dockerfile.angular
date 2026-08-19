@@ -6,11 +6,21 @@ FROM docker.io/dspace/dspace-angular:${DSPACE_ANGULAR_TAG} AS build
 
 WORKDIR /app
 
-# DSpace REST filters metadata by its current locale unless the allLanguages
-# projection is requested. Patch the item data service before compiling so
-# public item pages and the metadata editor receive every language variant.
+# A first visit without dsLanguage must use the repository default instead of
+# inheriting the browser's Accept-Language before the UI has initialized.
+COPY frontend/patches/apply-default-anonymous-language.mjs \
+    /tmp/apply-default-anonymous-language.mjs
+RUN node /tmp/apply-default-anonymous-language.mjs \
+    /app/src/app/core/locale/locale.service.ts
+
+# Public responses are locale-filtered by DSpace REST. Keep allLanguages
+# restricted to the administrative metadata editor and its PATCH responses.
+COPY frontend/overrides/edit-item-all-languages.resolver.ts \
+    /app/src/app/item-page/edit-item-page/edit-item-all-languages.resolver.ts
 COPY frontend/patches/apply-item-all-languages.mjs /tmp/apply-item-all-languages.mjs
-RUN node /tmp/apply-item-all-languages.mjs /app/src/app/core/data/item-data.service.ts
+RUN node /tmp/apply-item-all-languages.mjs \
+    /app/src/app/core/data/item-data.service.ts \
+    /app/src/app/item-page/edit-item-page/edit-item-page-routes.ts
 
 # Merge the locally maintained theme and its component registries into the
 # official source tree. Files not overridden here remain inherited from the

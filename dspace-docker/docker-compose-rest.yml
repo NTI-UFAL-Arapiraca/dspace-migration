@@ -26,6 +26,10 @@ services:
       # (This is necessary for docker-compose-dist.yml)
       dspace__P__server__P__ssr__P__url: ${dspace__P__server__P__ssr__P__url:-http://dspace:8080/server}
       dspace__P__name: ${dspace__P__name:-DSpace Started with Docker Compose}
+      # Negotiate public metadata by the UI language. DSpace 10 compares the
+      # base language (pt), while pt_BR remains the UI/default locale.
+      default__P__locale: ${DSPACE_DEFAULT_LOCALE:-pt_BR}
+      webui__P__supported__P__locales: ${DSPACE_SUPPORTED_LOCALES:-pt_BR, en}
       # db.url: Ensure we are using the 'dspacedb' image for our database
       db__P__url: ${db__P__url:-jdbc:postgresql://dspacedb:5432/dspace}
       # solr.server: Ensure we are using the 'dspacesolr' image for Solr

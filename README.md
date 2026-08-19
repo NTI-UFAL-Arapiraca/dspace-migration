@@ -134,6 +134,48 @@ docker compose --env-file ../.env -p d10 -f cli.yml run --rm \
 > Uma nova execução completa é apropriada quando os volumes do DSpace foram
 > removidos e a instância está vazia.
 
+### Migração das Estatísticas de Acesso para o Solr
+
+A última etapa do `uv run migrate` recria no core `statistics` do Solr as
+visualizações históricas armazenadas em
+`ud_biblioteca_publicacao.visualizacoes`. Esse dado não vira metadado Dublin
+Core. Para cada visualização legada é criado um evento de consulta do item.
+
+O relacionamento com o novo item ocorre em três passos:
+
+1. o importador SAF grava em cada coleção um `mapfile.txt`, relacionando
+   `item_<id da publicação>` ao handle criado pelo DSpace;
+2. o pipeline resolve esse handle para o UUID do item no PostgreSQL do DSpace;
+3. os eventos são enviados em lotes ao endpoint de atualização do core
+   `statistics` e recebem um commit final.
+
+As datas dos eventos são distribuídas uniformemente entre 1º de janeiro de
+`ano_pub` e a data da migração. Quando o ano está ausente ou inválido, é usada
+uma janela de cinco anos. Os identificadores dos eventos são determinísticos;
+portanto, repetir a injeção para os mesmos itens sobrescreve os eventos
+históricos em vez de duplicá-los.
+
+Essa etapa exige o banco legado, o PostgreSQL do DSpace e o Solr acessíveis
+pelas variáveis `DB_*`, `DSPACE_DB_*`, `SOLR_URL` e `SOLR_BATCH_SIZE` do `.env`.
+Ela só pode rodar depois da importação SAF, pois depende dos `mapfile.txt`.
+
+Para conferir a quantidade que será migrada sem escrever no Solr:
+
+```bash
+uv run inject-stats --dry-run
+```
+
+Para executar ou retomar apenas esta etapa:
+
+```bash
+uv run inject-stats
+```
+
+O `uv run migrate --skip-stats` pula a injeção. Itens com visualizações na
+origem, mas sem handle/UUID correspondente no DSpace, são informados e
+ignorados. O resumo final exibe o total de documentos Solr enviados e de itens
+processados.
+
 ---
 
 ## Estrutura do Pacote e Comandos CLI (`uv`)

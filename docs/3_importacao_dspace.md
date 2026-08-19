@@ -71,7 +71,43 @@ O comando lê `access_policies.json` e os `mapfile.txt`, localiza os bitstreams 
 > [!IMPORTANT]
 > Não remova a opção `permissions` dos arquivos `contents`. Ela garante que um PDF nunca fique público no intervalo entre a importação SAF e a aplicação da data de embargo.
 
-## 5. Geração de Miniaturas e Pré-visualizações (Thumbnails / Media Filter)
+## 5. Migração das Estatísticas de Acesso para o Solr
+
+As visualizações históricas vêm de
+`ud_biblioteca_publicacao.visualizacoes` no PostgreSQL legado. Elas não são
+gravadas como metadados do item: o comando `inject-stats` cria eventos de
+visualização diretamente no core `statistics` do Solr.
+
+A injeção depende dos `mapfile.txt` produzidos pela etapa 3. Cada linha associa
+`item_<id da publicação>` ao handle criado; o comando consulta o PostgreSQL do
+DSpace para resolver o handle em UUID e então associa os eventos ao item certo.
+Por isso, execute esta etapa somente após uma importação SAF concluída.
+
+Confira primeiro o cruzamento e o volume sem modificar o Solr:
+
+```bash
+uv run inject-stats --dry-run
+```
+
+Depois, faça a injeção:
+
+```bash
+uv run inject-stats
+```
+
+O comando usa `DB_*` para ler a origem, `DSPACE_DB_*` para resolver os UUIDs e
+`SOLR_URL`/`SOLR_BATCH_SIZE` para enviar os eventos em lotes. Para cada item,
+são gerados tantos eventos quanto o valor de `visualizacoes`. Suas datas são
+distribuídas entre janeiro de `ano_pub` e o momento da migração; sem ano válido,
+usa-se uma janela de cinco anos.
+
+Os UUIDs dos eventos são determinísticos. Assim, uma retomada com os mesmos
+itens atualiza os documentos existentes e não duplica a contagem histórica.
+Itens que têm acessos na origem, mas não possuem handle/UUID correspondente,
+são indicados no log e ignorados. No pipeline completo, essa etapa é executada
+automaticamente por `uv run migrate`; use `--skip-stats` para pulá-la.
+
+## 6. Geração de Miniaturas e Pré-visualizações (Thumbnails / Media Filter)
 
 Após a conclusão da importação dos itens, as miniaturas (thumbnails) e a extração de texto dos arquivos PDFs anexados precisam ser processadas. O DSpace **não** gera as miniaturas automaticamente durante a ingestão via SAF.
 

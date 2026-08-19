@@ -5,7 +5,7 @@ SELECT
     -- Metadados básicos de identificação
     p.name AS "dc.title",
     p.titulo_abstract AS "dc.title.alternative",
-    p.resumo AS "dc.description.abstract[pt_BR]",
+    p.resumo AS "dc.description.abstract[pt]",
     p.abstract AS "dc.description.abstract[en]",
     p.data_defesa AS "dc.date.issued",
     p.numero_paginas AS "dc.format.extent",

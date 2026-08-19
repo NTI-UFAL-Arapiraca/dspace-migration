@@ -1,7 +1,9 @@
 # Local runtime overrides. The complete defaults remain provided by the
 # version-matched DSpace Angular image.
 
-# Portuguese (Brazil) is used when the browser does not select an active locale.
+# Portuguese (Brazil) is the initial locale when there is no dsLanguage cookie.
+# The build patch intentionally does not infer the initial locale from the
+# browser's Accept-Language header; an explicit selection remains persisted.
 fallbackLanguage: pt-BR
 
 # The first matching theme wins. A theme with only a name matches every route,

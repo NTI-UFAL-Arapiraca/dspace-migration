@@ -28,12 +28,17 @@ O frontend não usa mais diretamente a imagem `*-dist` publicada. O
 locais no tema oficial `custom`, compila a distribuição e reutiliza a imagem
 oficial `dspace-10_x-dist` como runtime.
 
-Antes da compilação, o build aplica um patch restrito ao serviço de itens do
-Angular. Ele solicita a projeção REST `allLanguages` ao abrir um item e ao
-salvar seus metadados. A resposta padrão do backend filtra metadados pelo
-idioma corrente; sem essa projeção, um item com `dc.description.abstract` em
-`pt_BR` e `en` chega ao navegador com apenas uma das entradas, embora ambas
-estejam gravadas no banco.
+O backend negocia o idioma público por `Accept-Language` e devolve somente a
+variante correspondente dos metadados. O qualifier do resumo em português é
+`pt` (idioma-base da locale `pt_BR` no DSpace 10), enquanto
+`dc.language.iso` continua recebendo `pt_BR`. Antes da compilação, o frontend
+aplica um patch restrito à área administrativa: apenas o editor de metadados e
+suas respostas de salvamento solicitam a projeção REST `allLanguages`, para que
+nenhuma tradução fique oculta durante a edição.
+
+Acervos importados antes dessa normalização devem executar uma vez
+`backend/sql/normalize_abstract_languages.sql` e depois `index-discovery -b`,
+conforme `docs/2_configuracao_dspace.md`.
 
 O tema `custom` é ativado em `frontend/config/config.prod.yml`. Mudanças em
 SCSS, assets ou componentes exigem `build --no-cache dspace-angular` quando for

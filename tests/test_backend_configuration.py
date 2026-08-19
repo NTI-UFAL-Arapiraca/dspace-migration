@@ -6,6 +6,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DOCKER_ROOT = PROJECT_ROOT / "dspace-docker"
 SUBMISSION_FORMS = DOCKER_ROOT / "backend/config/submission-forms.xml"
+ABSTRACT_LANGUAGE_MIGRATION = (
+    DOCKER_ROOT / "backend/sql/normalize_abstract_languages.sql"
+)
 
 
 class BackendConfigurationTests(unittest.TestCase):
@@ -58,6 +61,28 @@ class BackendConfigurationTests(unittest.TestCase):
         )
         self.assertNotIn("/mnt/part2/saf_bundle", compose)
 
+    def test_rest_negotiates_public_metadata_language(self):
+        compose = (DOCKER_ROOT / "docker-compose-rest.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("default__P__locale: ${DSPACE_DEFAULT_LOCALE:-pt_BR}", compose)
+        self.assertIn(
+            "webui__P__supported__P__locales: "
+            "${DSPACE_SUPPORTED_LOCALES:-pt_BR, en}",
+            compose,
+        )
+
+    def test_existing_abstract_language_migration_is_narrow_and_idempotent(self):
+        sql = ABSTRACT_LANGUAGE_MIGRATION.read_text(encoding="utf-8")
+
+        self.assertIn("SET text_lang = 'pt'", sql)
+        self.assertIn("value.text_lang = 'pt_BR'", sql)
+        self.assertIn("schema.short_id = 'dc'", sql)
+        self.assertIn("field.element = 'description'", sql)
+        self.assertIn("field.qualifier = 'abstract'", sql)
+        self.assertNotIn("dc.language.iso", sql.split("UPDATE", 1)[1])
+
     def test_every_abstract_field_is_repeatable_and_language_qualified(self):
         root = ET.parse(SUBMISSION_FORMS).getroot()
         configured_forms = []
@@ -95,8 +120,9 @@ class BackendConfigurationTests(unittest.TestCase):
             pair.findtext("stored-value") for pair in languages.findall("pair")
         }
 
-        self.assertIn("pt_BR", stored_values)
+        self.assertIn("pt", stored_values)
         self.assertIn("en", stored_values)
+        self.assertNotIn("pt_BR", stored_values)
 
 
 if __name__ == "__main__":

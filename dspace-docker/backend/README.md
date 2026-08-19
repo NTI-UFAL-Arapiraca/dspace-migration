@@ -9,8 +9,8 @@ Overrides mantidos pelo projeto:
 - todas as definições de `dc.description.abstract` usam `repeatable=true`;
 - o seletor de idioma é habilitado com `language` e
   `common_iso_languages`;
-- `pt_BR` é oferecido explicitamente para corresponder ao idioma usado no
-  pacote SAF da migração.
+- `pt` e `en` são oferecidos para corresponder aos qualifiers dos abstracts;
+- `dc.language.iso` permanece independente e recebe `pt_BR` na migração.
 
 Ao atualizar a versão do DSpace, extraia novamente o arquivo da branch ou da
 imagem correspondente, reaplique somente esses overrides e execute os testes

@@ -53,9 +53,30 @@ Cada definição também habilita o seletor de idioma por meio de:
 <repeatable>true</repeatable>
 ```
 
-A lista `common_iso_languages` contém `pt_BR`, compatível com o idioma gravado
-pela migração, e `en`. Alterações nesse XML exigem a recriação do container
-`dspace`, mas não a reconstrução da imagem.
+A lista `common_iso_languages` contém `pt` e `en`. O resumo em português usa o
+qualifier `pt`, pois o filtro de metadados do DSpace 10 compara o idioma-base da
+locale atual. Isso não altera `dc.language.iso`, cujo valor continua sendo
+`pt_BR` para indicar que o documento foi escrito em português do Brasil.
+
+O Compose configura `default.locale=pt_BR` e
+`webui.supported.locales=pt_BR, en`. Assim, o header `Accept-Language` enviado
+pelo Angular faz o backend devolver somente os metadados do idioma atual nas
+páginas públicas e nos resultados de busca. A projeção `allLanguages` fica
+restrita ao editor administrativo, que precisa visualizar e preservar todas as
+traduções. Alterações nessas configurações exigem a recriação do container
+`dspace`, mas não a reconstrução da imagem do backend.
+
+Se os itens já tiverem sido importados por uma versão anterior da migração,
+normalize uma única vez os qualifiers `pt_BR` dos abstracts e reindexe a busca:
+
+```bash
+docker exec -i dspacedb psql -U dspace -d dspace \
+  < backend/sql/normalize_abstract_languages.sql
+docker compose -p d10 -f cli.yml run --rm dspace-cli index-discovery -b
+```
+
+O SQL é idempotente e limitado a `dc.description.abstract`; ele não modifica
+`dc.language.iso` nem outros campos.
 
 ## 4. Configurar o Frontend e o Tema
 
