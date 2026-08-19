@@ -34,6 +34,26 @@ class FrontendCustomizationTests(unittest.TestCase):
         self.assertIn("dspace-angular:${DSPACE_ANGULAR_TAG}-dist AS runtime", dockerfile)
         self.assertIn("COPY --chown=node:node --from=build /app/dist /app/dist", dockerfile)
 
+    def test_item_requests_keep_all_abstract_languages(self):
+        dockerfile = (DOCKER_ROOT / "Dockerfile.angular").read_text(
+            encoding="utf-8"
+        )
+        patch = (
+            DOCKER_ROOT / "frontend/patches/apply-item-all-languages.mjs"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("apply-item-all-languages.mjs", dockerfile)
+        self.assertLess(
+            dockerfile.index("apply-item-all-languages.mjs"),
+            dockerfile.index("npm run build:prod"),
+        )
+        self.assertEqual(2, patch.count("projection=allLanguages"))
+        self.assertIn("projections: string[] = ['allLanguages']", patch)
+        self.assertIn("constructAllLanguagesEndpoint", patch)
+        self.assertIn("getIDHrefObs(encodeURIComponent(id)", patch)
+        self.assertIn("href.includes('?') ? '&' : '?'", patch)
+        self.assertIn("occurrences !== 1", patch)
+
     def test_runtime_config_activates_custom_theme_first(self):
         config = (DOCKER_ROOT / "frontend/config/config.prod.yml").read_text(
             encoding="utf-8"

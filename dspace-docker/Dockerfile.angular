@@ -6,6 +6,12 @@ FROM docker.io/dspace/dspace-angular:${DSPACE_ANGULAR_TAG} AS build
 
 WORKDIR /app
 
+# DSpace REST filters metadata by its current locale unless the allLanguages
+# projection is requested. Patch the item data service before compiling so
+# public item pages and the metadata editor receive every language variant.
+COPY frontend/patches/apply-item-all-languages.mjs /tmp/apply-item-all-languages.mjs
+RUN node /tmp/apply-item-all-languages.mjs /app/src/app/core/data/item-data.service.ts
+
 # Merge the locally maintained theme and its component registries into the
 # official source tree. Files not overridden here remain inherited from the
 # version-matched base image.

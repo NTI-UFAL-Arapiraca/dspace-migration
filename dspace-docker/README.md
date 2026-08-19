@@ -28,6 +28,13 @@ O frontend não usa mais diretamente a imagem `*-dist` publicada. O
 locais no tema oficial `custom`, compila a distribuição e reutiliza a imagem
 oficial `dspace-10_x-dist` como runtime.
 
+Antes da compilação, o build aplica um patch restrito ao serviço de itens do
+Angular. Ele solicita a projeção REST `allLanguages` ao abrir um item e ao
+salvar seus metadados. A resposta padrão do backend filtra metadados pelo
+idioma corrente; sem essa projeção, um item com `dc.description.abstract` em
+`pt_BR` e `en` chega ao navegador com apenas uma das entradas, embora ambas
+estejam gravadas no banco.
+
 O tema `custom` é ativado em `frontend/config/config.prod.yml`. Mudanças em
 SCSS, assets ou componentes exigem `build --no-cache dspace-angular` quando for
 necessário invalidar todo o cache. Mudanças apenas nesse YAML exigem somente:
