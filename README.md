@@ -33,11 +33,11 @@ uv sync
 mkdir -p saf_bundle
 ```
 
-Revise o `.env`, principalmente as credenciais `DB_*` do PostgreSQL de origem
-e `DSPACE_API_USER`/`DSPACE_API_PASSWORD`. O diretório `SAF_BUNDLE_DIR` deve ser
-o mesmo montado no container DSpace. Com o valor padrão `saf_bundle`, isso já é
-feito automaticamente. Para usar outro disco, configure ambos com o mesmo
-caminho absoluto:
+Revise o `.env`, principalmente as credenciais `DB_*` do PostgreSQL de origem,
+`DSPACE_API_USER`/`DSPACE_API_PASSWORD` e o nome público `DSPACE_NAME`. O
+diretório `SAF_BUNDLE_DIR` deve ser o mesmo montado no container DSpace. Com o
+valor padrão `saf_bundle`, isso já é feito automaticamente. Para usar outro
+disco, configure ambos com o mesmo caminho absoluto:
 
 ```dotenv
 SAF_BUNDLE_DIR=/caminho/absoluto/saf_bundle

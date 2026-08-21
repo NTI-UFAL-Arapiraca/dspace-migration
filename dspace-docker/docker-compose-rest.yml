@@ -25,7 +25,10 @@ services:
       # Set SSR URL to the Docker container name so that UI can contact container directly in Production mode.
       # (This is necessary for docker-compose-dist.yml)
       dspace__P__server__P__ssr__P__url: ${dspace__P__server__P__ssr__P__url:-http://dspace:8080/server}
-      dspace__P__name: ${dspace__P__name:-DSpace Started with Docker Compose}
+      # Public repository name returned by REST and reused in headings such as
+      # "Estatísticas para <nome>". Keep it configurable without exposing the
+      # Docker development placeholder to users.
+      dspace__P__name: ${DSPACE_NAME:-Repositório Institucional da UFAL}
       # Negotiate public metadata by the UI language. DSpace 10 compares the
       # base language (pt), while pt_BR remains the UI/default locale.
       default__P__locale: ${DSPACE_DEFAULT_LOCALE:-pt_BR}

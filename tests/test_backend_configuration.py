@@ -73,6 +73,23 @@ class BackendConfigurationTests(unittest.TestCase):
             compose,
         )
 
+    def test_public_repository_name_is_institutional_and_configurable(self):
+        compose = (DOCKER_ROOT / "docker-compose-rest.yml").read_text(
+            encoding="utf-8"
+        )
+        env_example = (PROJECT_ROOT / ".env.example").read_text(encoding="utf-8")
+
+        self.assertIn(
+            "dspace__P__name: "
+            "${DSPACE_NAME:-Repositório Institucional da UFAL}",
+            compose,
+        )
+        self.assertIn(
+            "DSPACE_NAME=Repositório Institucional da UFAL",
+            env_example,
+        )
+        self.assertNotIn("DSpace Started with Docker Compose", compose)
+
     def test_existing_abstract_language_migration_is_narrow_and_idempotent(self):
         sql = ABSTRACT_LANGUAGE_MIGRATION.read_text(encoding="utf-8")
 

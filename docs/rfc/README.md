@@ -15,6 +15,7 @@ de contexto para reaplicar e revisar essas diferenças ao atualizar as imagens.
 | [0007](0007-negociacao-de-idioma-dos-metadados.md) | Filtrar metadados públicos por idioma e preservar todos no editor. |
 | [0008](0008-formulario-de-resumos-multilingues.md) | Permitir abstracts repetíveis e qualificados por idioma. |
 | [0009](0009-ocultacao-de-notas-internas.md) | Ocultar provenance do público. |
+| [0010](0010-nome-publico-do-repositorio.md) | Usar o nome institucional na API e na interface. |
 
 Uma nova alteração por override deve incluir sua RFC neste índice no mesmo
 commit. Cada RFC deve identificar arquivos, consequência operacional e testes.

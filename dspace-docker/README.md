@@ -36,6 +36,12 @@ aplica um patch restrito à área administrativa: apenas o editor de metadados e
 suas respostas de salvamento solicitam a projeção REST `allLanguages`, para que
 nenhuma tradução fique oculta durante a edição.
 
+O nome público do repositório vem de `DSPACE_NAME` e usa
+`Repositório Institucional da UFAL` por padrão. O backend publica esse valor
+como `dspace.name`; o frontend o reutiliza em títulos como “Estatísticas para
+Repositório Institucional da UFAL”. Depois de alterar a variável, recrie o
+container `dspace`.
+
 Acervos importados antes dessa normalização devem executar uma vez
 `backend/sql/normalize_abstract_languages.sql` e depois `index-discovery -b`,
 conforme `docs/2_configuracao_dspace.md`.
@@ -75,8 +81,9 @@ migração.
 O `submission-forms.xml` da imagem oficial está versionado em
 `backend/config/` e é montado como somente leitura nos serviços `dspace` e
 `dspace-cli`. As duas definições de `dc.description.abstract` são repetíveis e
-expõem a seleção de idioma do DSpace; a lista inclui explicitamente `pt_BR`,
-usado pela migração, além de `en`.
+expõem a seleção de idioma do DSpace; a lista inclui explicitamente `pt`, usado
+como qualifier do resumo em português, além de `en`. O metadado
+`dc.language.iso` continua usando `pt_BR`.
 
 Depois de alterar essa configuração, recrie o backend:
 

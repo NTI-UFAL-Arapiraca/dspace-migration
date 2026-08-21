@@ -17,6 +17,7 @@ class RfcDocumentationTests(unittest.TestCase):
         "0007-negociacao-de-idioma-dos-metadados.md",
         "0008-formulario-de-resumos-multilingues.md",
         "0009-ocultacao-de-notas-internas.md",
+        "0010-nome-publico-do-repositorio.md",
     }
 
     def test_every_known_override_has_an_indexed_rfc(self):
