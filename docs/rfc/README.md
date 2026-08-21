@@ -17,6 +17,7 @@ de contexto para reaplicar e revisar essas diferenças ao atualizar as imagens.
 | [0009](0009-ocultacao-de-notas-internas.md) | Ocultar provenance do público. |
 | [0010](0010-nome-publico-do-repositorio.md) | Usar o nome institucional na API e na interface. |
 | [0011](0011-endpoint-oai-pmh.md) | Publicar e configurar o endpoint OAI-PMH do backend. |
+| [0012](0012-seo-sitemaps-robots-ssr.md) | Ativar e validar sitemap, robots.txt e SSR. |
 
 Uma nova alteração por override deve incluir sua RFC neste índice no mesmo
 commit. Cada RFC deve identificar arquivos, consequência operacional e testes.

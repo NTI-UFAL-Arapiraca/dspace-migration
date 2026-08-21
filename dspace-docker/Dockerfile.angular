@@ -22,6 +22,10 @@ RUN node /tmp/apply-item-all-languages.mjs \
     /app/src/app/core/data/item-data.service.ts \
     /app/src/app/item-page/edit-item-page/edit-item-page-routes.ts
 
+# Keep the crawler policy under version control. Express renders the public UI
+# origin into this EJS template and serves it at the top-level /robots.txt.
+COPY frontend/overrides/robots.txt.ejs /app/src/robots.txt.ejs
+
 # Merge the locally maintained theme and its component registries into the
 # official source tree. Files not overridden here remain inherited from the
 # version-matched base image.

@@ -74,6 +74,36 @@ configure `DSPACE_SERVER_URL`, `DSPACE_UI_URL` e `DSPACE_ADMIN_EMAIL` no
 identificadores OAI. `OAI_ENABLED` permite desligar o módulo e `OAI_PATH`
 permite alterar apenas o segmento de URL.
 
+## SEO: sitemap, robots.txt e SSR
+
+O backend gera sitemaps XML e HTML diariamente às 01:15, conforme
+`SITEMAP_CRON`, e mantém os arquivos no volume nomeado `sitemaps`. A geração
+inicial pode ser executada da raiz do projeto com:
+
+```bash
+uv run generate-sitemaps
+```
+
+O frontend encaminha `/sitemap*` para esses arquivos e renderiza o template
+versionado `frontend/overrides/robots.txt.ejs` em `/robots.txt`. Esse template
+anuncia os dois índices e não bloqueia itens, handles, comunidades ou coleções.
+
+SSR não é um processo separado: a imagem customizada reutiliza o entrypoint
+`pm2-runtime` de `dspace-10_x-dist`, que executa `dist/server/main.js`. A
+configuração local mantém `transferState` e a substituição da URL REST ativas.
+Valide o ambiente iniciado com:
+
+```bash
+curl --fail http://localhost:4000/robots.txt
+curl --fail http://localhost:4000/sitemap_index.xml
+curl --fail http://localhost:4000/sitemap_index.html
+```
+
+Em produção, substitua `localhost` pelo domínio HTTPS e configure exatamente
+esse domínio em `DSPACE_UI_URL`; caso contrário, robots e sitemaps anunciarão
+URLs incorretas e validadores externos poderão considerar também o SSR
+inacessível.
+
 Acervos importados antes dessa normalização devem executar uma vez
 `backend/sql/normalize_abstract_languages.sql` e depois `index-discovery -b`,
 conforme `docs/2_configuracao_dspace.md`.

@@ -34,6 +34,9 @@ services:
       # ${dspace.server.url}/${oai.path}/request.
       oai__P__enabled: "${OAI_ENABLED:-true}"
       oai__P__path: ${OAI_PATH:-oai}
+      # Regenerate XML and HTML sitemaps every day at 01:15. The generated
+      # files are persisted and proxied by Angular at /sitemap*.
+      sitemap__P__cron: "${SITEMAP_CRON:-0 15 1 * * ?}"
       # Negotiate public metadata by the UI language. DSpace 10 compares the
       # base language (pt), while pt_BR remains the UI/default locale.
       default__P__locale: ${DSPACE_DEFAULT_LOCALE:-pt_BR}
@@ -62,6 +65,8 @@ services:
     volumes:
     # Keep DSpace assetstore directory between reboots
     - assetstore:/dspace/assetstore
+    # Keep generated XML/HTML sitemaps available across backend recreations.
+    - sitemaps:/dspace/sitemaps
     # DSPACE_SAF_HOST_DIR permite sobrescrever o mount; se ausente, reutiliza
     # SAF_BUNDLE_DIR. Sem nenhuma das variáveis, usa saf_bundle/ na raiz.
     - ${DSPACE_SAF_HOST_DIR:-${SAF_BUNDLE_DIR:-../saf_bundle}}:/dspace/saf_bundle
@@ -144,4 +149,5 @@ services:
 volumes:
   assetstore:
   pgdata:
+  sitemaps:
   solr_data:

@@ -117,7 +117,8 @@ O comando realiza, nesta ordem:
 4. geração e execução de `import_all.sh` dentro do container `dspace`;
 5. aplicação das políticas de embargo aos bitstreams;
 6. injeção das estatísticas históricas no Solr;
-7. reconstrução do índice OAI-PMH no core `oai` do Solr.
+7. reconstrução do índice OAI-PMH no core `oai` do Solr;
+8. geração dos sitemaps XML e HTML para mecanismos de busca.
 
 Ao terminar, revise `routing_report.csv`, `pdf_extraction_issues.csv` (se
 existir) e um item bilíngue na interface em `http://localhost:4000`.
@@ -134,6 +135,25 @@ Confira o endpoint com:
 curl --fail \
   'http://localhost:8080/server/oai/request?verb=Identify'
 ```
+
+O pipeline também gera os sitemaps imediatamente; o backend volta a gerá-los
+todos os dias às 01:15. Para executar somente essa etapa:
+
+```bash
+uv run generate-sitemaps
+```
+
+Valide os três requisitos básicos de SEO:
+
+```bash
+curl --fail http://localhost:4000/robots.txt
+curl --fail http://localhost:4000/sitemap_index.xml
+curl --fail http://localhost:4000/sitemap_index.html
+```
+
+O container `dspace-angular` usa o runtime SSR oficial de produção. Uma
+requisição direta a uma página de item deve retornar o título e os metadados no
+HTML, mesmo sem executar JavaScript.
 
 Em produção, configure `DSPACE_SERVER_URL`, `DSPACE_UI_URL` e
 `DSPACE_ADMIN_EMAIL` no `.env` com o domínio HTTPS e o contato institucionais.
@@ -212,7 +232,8 @@ O projeto é empacotado via **`uv`** com código estruturado em `src/dspace_migr
 | `uv run apply-embargoes` | Aplica no DSpace as datas de liberação dos PDFs embargados, após a importação SAF. |
 | `uv run inject-stats` | Injeta no Solr as contagens históricas de visualizações dos itens importados. |
 | `uv run rebuild-oai` | Limpa e reconstrói o índice OAI-PMH a partir dos itens do DSpace. |
-| `uv run migrate` | Executa o pipeline completo: extração, hierarquia, importação SAF, embargos, estatísticas e OAI. |
+| `uv run generate-sitemaps` | Gera os índices XML e HTML anunciados em `robots.txt`. |
+| `uv run migrate` | Executa o pipeline completo: extração, hierarquia, importação SAF, embargos, estatísticas, OAI e sitemaps. |
 
 ---
 
@@ -242,6 +263,7 @@ Consulte o guia completo passo a passo na pasta [`docs/`](docs/):
 1. **[Etapa 1: Extração e Geração do Pacote SAF](docs/1_extracao_saf.md)**
 2. **[Etapa 2: Configuração e Preparação do DSpace](docs/2_configuracao_dspace.md)**
 3. **[Etapa 3: Importação Final no DSpace](docs/3_importacao_dspace.md)**
+4. **[Operação e manutenção: SEO, OAI, volumes e atualizações](docs/4_operacao_manutencao.md)**
 
 ## Testes automatizados
 

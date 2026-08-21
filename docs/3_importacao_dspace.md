@@ -128,7 +128,25 @@ curl --fail \
   'http://localhost:8080/server/oai/request?verb=ListRecords&metadataPrefix=oai_dc'
 ```
 
-## 7. Geração de Miniaturas e Pré-visualizações (Thumbnails / Media Filter)
+## 7. Geração dos Sitemaps
+
+Após indexar o OAI, gere os índices usados pelos mecanismos de busca:
+
+```bash
+uv run generate-sitemaps
+```
+
+Essa é a última etapa automática de `uv run migrate`; use `--skip-sitemaps`
+somente para adiá-la. Os arquivos ficam em um volume persistente e o backend os
+atualiza diariamente. Confira as rotas públicas:
+
+```bash
+curl --fail http://localhost:4000/robots.txt
+curl --fail http://localhost:4000/sitemap_index.xml
+curl --fail http://localhost:4000/sitemap_index.html
+```
+
+## 8. Geração de Miniaturas e Pré-visualizações (Thumbnails / Media Filter)
 
 Após a conclusão da importação dos itens, as miniaturas (thumbnails) e a extração de texto dos arquivos PDFs anexados precisam ser processadas. O DSpace **não** gera as miniaturas automaticamente durante a ingestão via SAF.
 

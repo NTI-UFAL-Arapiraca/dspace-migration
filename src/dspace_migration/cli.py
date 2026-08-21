@@ -211,6 +211,49 @@ def run_rebuild_oai():
         sys.exit(1)
 
 
+def generate_sitemaps(docker_container: str = "dspace") -> None:
+    """Generate XML and HTML sitemaps using the running DSpace backend."""
+    command = [
+        "docker",
+        "exec",
+        docker_container,
+        "/dspace/bin/dspace",
+        "generate-sitemaps",
+    ]
+    print(f"  → {' '.join(command)}")
+    subprocess.run(command, check=True)
+
+
+def run_generate_sitemaps():
+    """CLI command to regenerate the public DSpace sitemaps."""
+    parser = argparse.ArgumentParser(
+        description="Gera os sitemaps XML e HTML do DSpace."
+    )
+    parser.add_argument(
+        "--docker-container",
+        default="dspace",
+        help="Nome do container Docker do DSpace (default: dspace)",
+    )
+    args, _ = parser.parse_known_args()
+
+    print("=== Gerando Sitemaps do DSpace ===")
+    try:
+        generate_sitemaps(args.docker_container)
+        print("✔ Sitemaps XML e HTML gerados.")
+    except subprocess.CalledProcessError as e:
+        print(
+            f"✘ Erro ao gerar sitemaps (exit code {e.returncode}).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    except FileNotFoundError:
+        print(
+            "✘ Comando 'docker' não encontrado. Verifique se o Docker está instalado.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
 def migrate_all():
     """CLI command to run the full end-to-end migration pipeline."""
     parser = argparse.ArgumentParser(description="Pipeline completo de migração para o DSpace.")
@@ -230,6 +273,11 @@ def migrate_all():
         help="Pula a reconstrução do índice OAI-PMH",
     )
     parser.add_argument(
+        "--skip-sitemaps",
+        action="store_true",
+        help="Pula a geração dos sitemaps XML e HTML",
+    )
+    parser.add_argument(
         "--docker-container",
         default="dspace",
         help="Nome do container Docker do DSpace (default: dspace)",
@@ -247,6 +295,7 @@ def migrate_all():
         + int(not args.skip_docker)
         + int(not args.skip_stats)
         + int(not args.skip_oai)
+        + int(not args.skip_sitemaps)
     )
     step = 1
 
@@ -350,6 +399,7 @@ def migrate_all():
     # ── Reconstrução do índice OAI-PMH ──────────────────────────────────────
     if not args.skip_oai:
         print(f"\n[{step}/{total_steps}] Reconstruindo índice OAI-PMH...")
+        step += 1
         try:
             rebuild_oai_index(args.docker_container)
             print("  ✔ Índice OAI-PMH reconstruído.")
@@ -367,6 +417,27 @@ def migrate_all():
             sys.exit(1)
     else:
         print("\nReconstrução do índice OAI: PULADA (--skip-oai)")
+
+    # ── Geração de sitemaps para mecanismos de busca ────────────────────────
+    if not args.skip_sitemaps:
+        print(f"\n[{step}/{total_steps}] Gerando sitemaps XML e HTML...")
+        try:
+            generate_sitemaps(args.docker_container)
+            print("  ✔ Sitemaps gerados.")
+        except subprocess.CalledProcessError as e:
+            print(
+                f"✘ Erro ao gerar sitemaps (exit code {e.returncode}).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        except FileNotFoundError:
+            print(
+                "✘ Comando 'docker' não encontrado. Verifique se o Docker está instalado.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    else:
+        print("\nGeração de sitemaps: PULADA (--skip-sitemaps)")
 
     # ── Relatório final ───────────────────────────────────────────────────────
     check_and_report_issues()

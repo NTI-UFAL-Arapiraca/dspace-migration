@@ -6,6 +6,12 @@
 # browser's Accept-Language header; an explicit selection remains persisted.
 fallbackLanguage: pt-BR
 
+# Production is served by the official *-dist SSR runtime. Keep server state
+# transfer and public/internal REST URL replacement enabled for indexable HTML.
+ssr:
+  transferState: true
+  replaceRestUrl: true
+
 # The first matching theme wins. A theme with only a name matches every route,
 # so the locally compiled custom theme is the site-wide default.
 themes:

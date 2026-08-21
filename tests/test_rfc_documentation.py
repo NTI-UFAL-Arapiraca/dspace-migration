@@ -19,6 +19,7 @@ class RfcDocumentationTests(unittest.TestCase):
         "0009-ocultacao-de-notas-internas.md",
         "0010-nome-publico-do-repositorio.md",
         "0011-endpoint-oai-pmh.md",
+        "0012-seo-sitemaps-robots-ssr.md",
     }
 
     def test_every_known_override_has_an_indexed_rfc(self):
@@ -60,6 +61,25 @@ class RfcDocumentationTests(unittest.TestCase):
                 self.assertIn("uv run inject-stats --dry-run", content)
                 self.assertIn("SOLR_BATCH_SIZE", content)
                 self.assertIn("determinísticos", content)
+
+    def test_seo_and_oai_maintenance_is_documented(self):
+        guide = (PROJECT_ROOT / "docs/4_operacao_manutencao.md").read_text(
+            encoding="utf-8"
+        )
+
+        required_topics = (
+            "DSPACE_SERVER_URL",
+            "DSPACE_UI_URL",
+            "X-Forwarded-Proto",
+            "uv run generate-sitemaps",
+            "frontend/overrides/robots.txt.ejs",
+            "/app/dist/server/main.js",
+            "uv run rebuild-oai",
+            "docker compose down -v",
+            "Checklist após migração ou manutenção",
+        )
+        for topic in required_topics:
+            self.assertIn(topic, guide)
 
 
 if __name__ == "__main__":

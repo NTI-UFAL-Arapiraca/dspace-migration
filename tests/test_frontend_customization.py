@@ -71,6 +71,29 @@ class FrontendCustomizationTests(unittest.TestCase):
         self.assertLess(custom_position, fallback_position)
         self.assertIn("fallbackLanguage: pt-BR", config)
 
+    def test_seo_uses_ssr_runtime_and_advertises_sitemaps_in_robots(self):
+        dockerfile = (DOCKER_ROOT / "Dockerfile.angular").read_text(
+            encoding="utf-8"
+        )
+        config = (DOCKER_ROOT / "frontend/config/config.prod.yml").read_text(
+            encoding="utf-8"
+        )
+        robots = (
+            DOCKER_ROOT / "frontend/overrides/robots.txt.ejs"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("npm run build:prod", dockerfile)
+        self.assertIn("dspace-angular:${DSPACE_ANGULAR_TAG}-dist AS runtime", dockerfile)
+        self.assertIn("COPY frontend/overrides/robots.txt.ejs", dockerfile)
+        self.assertIn("ssr:", config)
+        self.assertIn("transferState: true", config)
+        self.assertIn("replaceRestUrl: true", config)
+        self.assertIn("Sitemap: <%= origin %>/sitemap_index.xml", robots)
+        self.assertIn("Sitemap: <%= origin %>/sitemap_index.html", robots)
+        self.assertIn("User-agent: *", robots)
+        self.assertNotIn("Disallow: /items", robots)
+        self.assertNotIn("Disallow: /handle", robots)
+
     def test_anonymous_visitors_default_to_brazilian_portuguese(self):
         dockerfile = (DOCKER_ROOT / "Dockerfile.angular").read_text(
             encoding="utf-8"

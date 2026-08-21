@@ -73,10 +73,12 @@ uv run extract-pdfs
 
 O comando `uv run migrate` vai além desta etapa: ele também configura a
 hierarquia via API, gera e executa a importação no container DSpace, aplica os
-embargos, injeta as estatísticas e reconstrói o índice OAI-PMH. Use
+embargos, injeta as estatísticas, reconstrói o índice OAI-PMH e gera os
+sitemaps. Use
 `--skip-docker` apenas quando os itens desta execução já tiverem sido importados
 e os `mapfile.txt` correspondentes existirem; use `--skip-stats` para não
-alterar as estatísticas e `--skip-oai` para não reconstruir o core OAI.
+alterar as estatísticas, `--skip-oai` para não reconstruir o core OAI e
+`--skip-sitemaps` para adiar a geração dos índices de busca.
 
 ## Resultado
 

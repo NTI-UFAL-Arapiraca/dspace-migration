@@ -3,7 +3,7 @@ import sys
 import unittest
 from contextlib import redirect_stdout
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 from dspace_migration.cli import migrate_all
 
@@ -15,7 +15,13 @@ class CliPipelineTests(unittest.TestCase):
             patch.object(
                 sys,
                 "argv",
-                ["migrate", "--skip-docker", "--skip-stats", "--skip-oai"],
+                [
+                    "migrate",
+                    "--skip-docker",
+                    "--skip-stats",
+                    "--skip-oai",
+                    "--skip-sitemaps",
+                ],
             ),
             patch("dspace_migration.cli.process_data"),
             patch("dspace_migration.cli.extract_pdfs"),
@@ -36,7 +42,7 @@ class CliPipelineTests(unittest.TestCase):
         self.assertIn("[5/5] Aplicando políticas de embargo", rendered)
         self.assertNotIn("[6/5]", rendered)
 
-    def test_unified_pipeline_rebuilds_oai_after_existing_import(self):
+    def test_unified_pipeline_rebuilds_oai_and_generates_sitemaps(self):
         output = io.StringIO()
         with (
             patch.object(sys, "argv", ["migrate", "--skip-docker", "--skip-stats"]),
@@ -54,19 +60,36 @@ class CliPipelineTests(unittest.TestCase):
         ):
             migrate_all()
 
-        run.assert_called_once_with(
+        self.assertEqual(
             [
-                "docker",
-                "exec",
-                "dspace",
-                "/dspace/bin/dspace",
-                "oai",
-                "import",
-                "-c",
+                call(
+                    [
+                        "docker",
+                        "exec",
+                        "dspace",
+                        "/dspace/bin/dspace",
+                        "oai",
+                        "import",
+                        "-c",
+                    ],
+                    check=True,
+                ),
+                call(
+                    [
+                        "docker",
+                        "exec",
+                        "dspace",
+                        "/dspace/bin/dspace",
+                        "generate-sitemaps",
+                    ],
+                    check=True,
+                ),
             ],
-            check=True,
+            run.call_args_list,
         )
-        self.assertIn("[6/6] Reconstruindo índice OAI-PMH", output.getvalue())
+        rendered = output.getvalue()
+        self.assertIn("[6/7] Reconstruindo índice OAI-PMH", rendered)
+        self.assertIn("[7/7] Gerando sitemaps XML e HTML", rendered)
 
 
 if __name__ == "__main__":

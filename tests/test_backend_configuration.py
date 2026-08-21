@@ -118,6 +118,20 @@ class BackendConfigurationTests(unittest.TestCase):
         for setting in expected_env_settings:
             self.assertIn(setting, env_example)
 
+    def test_sitemaps_are_scheduled_and_persisted(self):
+        compose = (DOCKER_ROOT / "docker-compose-rest.yml").read_text(
+            encoding="utf-8"
+        )
+        env_example = (PROJECT_ROOT / ".env.example").read_text(encoding="utf-8")
+
+        self.assertIn(
+            'sitemap__P__cron: "${SITEMAP_CRON:-0 15 1 * * ?}"',
+            compose,
+        )
+        self.assertIn("- sitemaps:/dspace/sitemaps", compose)
+        self.assertIn("  sitemaps:", compose)
+        self.assertIn("SITEMAP_CRON=0 15 1 * * ?", env_example)
+
     def test_existing_abstract_language_migration_is_narrow_and_idempotent(self):
         sql = ABSTRACT_LANGUAGE_MIGRATION.read_text(encoding="utf-8")
 

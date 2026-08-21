@@ -148,6 +148,32 @@ Em produção, `DSPACE_SERVER_URL` e `DSPACE_UI_URL` devem apontar para os
 endereços HTTPS públicos; `DSPACE_ADMIN_EMAIL` deve conter o contato
 institucional anunciado pelo verbo `Identify`.
 
+### SEO: sitemap, robots.txt e SSR
+
+O backend agenda a geração diária dos sitemaps e persiste os arquivos no volume
+`sitemaps`. Gere a primeira versão imediatamente após a importação:
+
+```bash
+cd ..
+uv run generate-sitemaps
+cd dspace-docker
+```
+
+O servidor Angular de produção entrega `robots.txt` e encaminha `/sitemap*`
+para o backend. Valide:
+
+```bash
+curl --fail http://localhost:4000/robots.txt
+curl --fail http://localhost:4000/sitemap_index.xml
+curl --fail http://localhost:4000/sitemap_index.html
+```
+
+O serviço `dspace-angular` executa `/app/dist/server/main.js` pelo runtime
+oficial `dspace-10_x-dist`; portanto, as páginas públicas usam SSR. Para testar
+sem navegador, faça uma requisição a um item e confirme que título e metadados
+já constam no HTML retornado. Em produção, use a URL HTTPS pública configurada
+em `DSPACE_UI_URL` nesses testes.
+
 ## 6. Criar Conta de Administrador
 
 Para realizar a importação de dados, crie uma conta de administrador rodando o comando a seguir:

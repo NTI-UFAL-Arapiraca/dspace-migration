@@ -1,0 +1,18 @@
+# Advertise both DSpace sitemap formats using the configured public UI origin.
+Sitemap: <%= origin %>/sitemap_index.xml
+Sitemap: <%= origin %>/sitemap_index.html
+
+User-agent: *
+
+# Keep public item, handle, community, collection and file pages crawlable.
+# Block dynamic, private and potentially expensive application areas.
+Disallow: /search
+Disallow: /admin/
+Disallow: /processes
+Disallow: /submit
+Disallow: /workspaceitems
+Disallow: /profile
+Disallow: /workflowitems
+Disallow: /entities/*?f
+Disallow: /collections/*?f
+Disallow: /communities/*?spc.page
