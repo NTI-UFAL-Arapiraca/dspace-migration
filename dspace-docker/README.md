@@ -42,6 +42,38 @@ como `dspace.name`; o frontend o reutiliza em títulos como “Estatísticas par
 Repositório Institucional da UFAL”. Depois de alterar a variável, recrie o
 container `dspace`.
 
+## OAI-PMH
+
+O módulo OAI-PMH está explicitamente habilitado no backend e usa o mesmo
+container e a mesma porta da API REST. Com a configuração local padrão, o
+endpoint é:
+
+```text
+http://localhost:8080/server/oai/request
+```
+
+Valide o protocolo com o verbo `Identify`:
+
+```bash
+curl --fail \
+  'http://localhost:8080/server/oai/request?verb=Identify'
+```
+
+Depois de uma importação inicial ou reconstrução completa do acervo, popule o
+core `oai` do Solr:
+
+```bash
+docker compose --env-file ../.env -p d10 -f cli.yml run --rm \
+  dspace-cli oai import -c
+```
+
+O `-c` limpa somente o índice OAI antes de reconstruí-lo; não remove itens do
+DSpace. Para uma atualização sem limpeza, omita essa opção. Em produção,
+configure `DSPACE_SERVER_URL`, `DSPACE_UI_URL` e `DSPACE_ADMIN_EMAIL` no
+`.env`. O hostname de `DSPACE_UI_URL` também é usado como prefixo padrão dos
+identificadores OAI. `OAI_ENABLED` permite desligar o módulo e `OAI_PATH`
+permite alterar apenas o segmento de URL.
+
 Acervos importados antes dessa normalização devem executar uma vez
 `backend/sql/normalize_abstract_languages.sql` e depois `index-discovery -b`,
 conforme `docs/2_configuracao_dspace.md`.

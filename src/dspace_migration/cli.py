@@ -1,5 +1,6 @@
 import sys
 import argparse
+import subprocess
 from pathlib import Path
 from dspace_migration.metadata import process_data
 from dspace_migration.pdfs import extract_pdfs
@@ -165,10 +166,53 @@ def run_inject_stats():
         sys.exit(1)
 
 
+def rebuild_oai_index(docker_container: str = "dspace") -> None:
+    """Clear and rebuild the OAI Solr index using the running DSpace backend."""
+    command = [
+        "docker",
+        "exec",
+        docker_container,
+        "/dspace/bin/dspace",
+        "oai",
+        "import",
+        "-c",
+    ]
+    print(f"  → {' '.join(command)}")
+    subprocess.run(command, check=True)
+
+
+def run_rebuild_oai():
+    """CLI command to rebuild the DSpace OAI-PMH index."""
+    parser = argparse.ArgumentParser(
+        description="Limpa e reconstrói o índice OAI-PMH do DSpace."
+    )
+    parser.add_argument(
+        "--docker-container",
+        default="dspace",
+        help="Nome do container Docker do DSpace (default: dspace)",
+    )
+    args, _ = parser.parse_known_args()
+
+    print("=== Reconstruindo Índice OAI-PMH do DSpace ===")
+    try:
+        rebuild_oai_index(args.docker_container)
+        print("✔ Índice OAI-PMH reconstruído.")
+    except subprocess.CalledProcessError as e:
+        print(
+            f"✘ Erro ao reconstruir o índice OAI (exit code {e.returncode}).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    except FileNotFoundError:
+        print(
+            "✘ Comando 'docker' não encontrado. Verifique se o Docker está instalado.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
 def migrate_all():
     """CLI command to run the full end-to-end migration pipeline."""
-    import subprocess
-
     parser = argparse.ArgumentParser(description="Pipeline completo de migração para o DSpace.")
     parser.add_argument(
         "--skip-docker",
@@ -179,6 +223,11 @@ def migrate_all():
         "--skip-stats",
         action="store_true",
         help="Pula a injeção de estatísticas no Solr",
+    )
+    parser.add_argument(
+        "--skip-oai",
+        action="store_true",
+        help="Pula a reconstrução do índice OAI-PMH",
     )
     parser.add_argument(
         "--docker-container",
@@ -193,7 +242,12 @@ def migrate_all():
     )
     args, _ = parser.parse_known_args()
 
-    total_steps = 5 + int(not args.skip_docker) + int(not args.skip_stats)
+    total_steps = (
+        5
+        + int(not args.skip_docker)
+        + int(not args.skip_stats)
+        + int(not args.skip_oai)
+    )
     step = 1
 
     print("══════════════════════════════════════════════════")
@@ -283,6 +337,7 @@ def migrate_all():
     # ── Etapa 6: Injeção de estatísticas ─────────────────────────────────────
     if not args.skip_stats:
         print(f"\n[{step}/{total_steps}] Injetando estatísticas de visualizações no Solr...")
+        step += 1
         try:
             inject_statistics()
             print("  ✔ Estatísticas injetadas.")
@@ -291,6 +346,27 @@ def migrate_all():
             sys.exit(1)
     else:
         print("\nInjeção de estatísticas: PULADA (--skip-stats)")
+
+    # ── Reconstrução do índice OAI-PMH ──────────────────────────────────────
+    if not args.skip_oai:
+        print(f"\n[{step}/{total_steps}] Reconstruindo índice OAI-PMH...")
+        try:
+            rebuild_oai_index(args.docker_container)
+            print("  ✔ Índice OAI-PMH reconstruído.")
+        except subprocess.CalledProcessError as e:
+            print(
+                f"✘ Erro ao reconstruir o índice OAI (exit code {e.returncode}).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        except FileNotFoundError:
+            print(
+                "✘ Comando 'docker' não encontrado. Verifique se o Docker está instalado.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    else:
+        print("\nReconstrução do índice OAI: PULADA (--skip-oai)")
 
     # ── Relatório final ───────────────────────────────────────────────────────
     check_and_report_issues()

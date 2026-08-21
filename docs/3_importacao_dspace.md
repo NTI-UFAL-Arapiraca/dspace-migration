@@ -107,7 +107,28 @@ Itens que têm acessos na origem, mas não possuem handle/UUID correspondente,
 são indicados no log e ignorados. No pipeline completo, essa etapa é executada
 automaticamente por `uv run migrate`; use `--skip-stats` para pulá-la.
 
-## 6. Geração de Miniaturas e Pré-visualizações (Thumbnails / Media Filter)
+## 6. Reconstrução do Índice OAI-PMH
+
+O endpoint OAI consulta seu próprio core no Solr. Depois da importação SAF,
+reconstrua esse índice para que os novos documentos possam ser colhidos:
+
+```bash
+uv run rebuild-oai
+```
+
+Esse comando executa `dspace oai import -c` no container configurado, limpa
+somente o índice OAI e o repopula a partir dos itens públicos do DSpace. Ele é
+executado automaticamente como a última etapa de `uv run migrate`. Use
+`uv run migrate --skip-oai` apenas quando desejar adiar essa reconstrução.
+
+Valide o resultado com:
+
+```bash
+curl --fail \
+  'http://localhost:8080/server/oai/request?verb=ListRecords&metadataPrefix=oai_dc'
+```
+
+## 7. Geração de Miniaturas e Pré-visualizações (Thumbnails / Media Filter)
 
 Após a conclusão da importação dos itens, as miniaturas (thumbnails) e a extração de texto dos arquivos PDFs anexados precisam ser processadas. O DSpace **não** gera as miniaturas automaticamente durante a ingestão via SAF.
 

@@ -90,6 +90,34 @@ class BackendConfigurationTests(unittest.TestCase):
         )
         self.assertNotIn("DSpace Started with Docker Compose", compose)
 
+    def test_oai_endpoint_is_enabled_and_uses_public_backend_configuration(self):
+        compose = (DOCKER_ROOT / "docker-compose-rest.yml").read_text(
+            encoding="utf-8"
+        )
+        env_example = (PROJECT_ROOT / ".env.example").read_text(encoding="utf-8")
+
+        expected_compose_settings = (
+            "dspace__P__server__P__url: "
+            "${DSPACE_SERVER_URL:-http://localhost:8080/server}",
+            "dspace__P__ui__P__url: ${DSPACE_UI_URL:-http://localhost:4000}",
+            "mail__P__admin: "
+            "${DSPACE_ADMIN_EMAIL:-${DSPACE_API_USER:-test@test.edu}}",
+            'oai__P__enabled: "${OAI_ENABLED:-true}"',
+            "oai__P__path: ${OAI_PATH:-oai}",
+        )
+        for setting in expected_compose_settings:
+            self.assertIn(setting, compose)
+
+        expected_env_settings = (
+            "DSPACE_SERVER_URL=http://localhost:8080/server",
+            "DSPACE_UI_URL=http://localhost:4000",
+            "DSPACE_ADMIN_EMAIL=test@test.edu",
+            "OAI_ENABLED=true",
+            "OAI_PATH=oai",
+        )
+        for setting in expected_env_settings:
+            self.assertIn(setting, env_example)
+
     def test_existing_abstract_language_migration_is_narrow_and_idempotent(self):
         sql = ABSTRACT_LANGUAGE_MIGRATION.read_text(encoding="utf-8")
 

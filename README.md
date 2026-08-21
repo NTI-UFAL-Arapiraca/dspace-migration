@@ -116,11 +116,30 @@ O comando realiza, nesta ordem:
 3. criação/reutilização das comunidades e coleções pela API REST;
 4. geração e execução de `import_all.sh` dentro do container `dspace`;
 5. aplicação das políticas de embargo aos bitstreams;
-6. injeção das estatísticas históricas no Solr.
+6. injeção das estatísticas históricas no Solr;
+7. reconstrução do índice OAI-PMH no core `oai` do Solr.
 
 Ao terminar, revise `routing_report.csv`, `pdf_extraction_issues.csv` (se
-existir) e um item bilíngue na interface em `http://localhost:4000`. Para gerar
-miniaturas e texto indexável dos PDFs, execute:
+existir) e um item bilíngue na interface em `http://localhost:4000`.
+
+Para preencher do zero o índice OAI-PMH depois da importação inicial:
+
+```bash
+uv run rebuild-oai
+```
+
+Confira o endpoint com:
+
+```bash
+curl --fail \
+  'http://localhost:8080/server/oai/request?verb=Identify'
+```
+
+Em produção, configure `DSPACE_SERVER_URL`, `DSPACE_UI_URL` e
+`DSPACE_ADMIN_EMAIL` no `.env` com o domínio HTTPS e o contato institucionais.
+O endpoint público será
+`{DSPACE_SERVER_URL}/{OAI_PATH}/request`. Para gerar miniaturas e texto
+indexável dos PDFs, execute:
 
 ```bash
 cd dspace-docker
@@ -192,7 +211,8 @@ O projeto é empacotado via **`uv`** com código estruturado em `src/dspace_migr
 | `uv run generate-import-script` | Gera o script `import_all.sh` com um comando de importação por coleção, pronto para executar dentro do container Docker. |
 | `uv run apply-embargoes` | Aplica no DSpace as datas de liberação dos PDFs embargados, após a importação SAF. |
 | `uv run inject-stats` | Injeta no Solr as contagens históricas de visualizações dos itens importados. |
-| `uv run migrate` | Executa o pipeline completo: extração, hierarquia, importação SAF, embargos e estatísticas. |
+| `uv run rebuild-oai` | Limpa e reconstrói o índice OAI-PMH a partir dos itens do DSpace. |
+| `uv run migrate` | Executa o pipeline completo: extração, hierarquia, importação SAF, embargos, estatísticas e OAI. |
 
 ---
 

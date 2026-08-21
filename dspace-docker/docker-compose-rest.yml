@@ -18,10 +18,10 @@ services:
       # See https://github.com/DSpace/DSpace/blob/main/dspace/config/config-definition.xml
       # __P__ => "." (e.g. dspace__P__dir => dspace.dir)
       # __D__ => "-" (e.g. google__D__metadata => google-metadata)
-      # Uncomment to set a non-default value for dspace.dir, dspace.server.url or dspace.ui.url
+      # Public URLs are also used to generate OAI-PMH links and identifiers.
       # dspace__P__dir: /dspace
-      # dspace__P__server__P__url: http://localhost:8080/server
-      # dspace__P__ui__P__url: http://localhost:4000
+      dspace__P__server__P__url: ${DSPACE_SERVER_URL:-http://localhost:8080/server}
+      dspace__P__ui__P__url: ${DSPACE_UI_URL:-http://localhost:4000}
       # Set SSR URL to the Docker container name so that UI can contact container directly in Production mode.
       # (This is necessary for docker-compose-dist.yml)
       dspace__P__server__P__ssr__P__url: ${dspace__P__server__P__ssr__P__url:-http://dspace:8080/server}
@@ -29,6 +29,11 @@ services:
       # "Estatísticas para <nome>". Keep it configurable without exposing the
       # Docker development placeholder to users.
       dspace__P__name: ${DSPACE_NAME:-Repositório Institucional da UFAL}
+      mail__P__admin: ${DSPACE_ADMIN_EMAIL:-${DSPACE_API_USER:-test@test.edu}}
+      # OAI-PMH is served by the same Spring Boot backend at
+      # ${dspace.server.url}/${oai.path}/request.
+      oai__P__enabled: "${OAI_ENABLED:-true}"
+      oai__P__path: ${OAI_PATH:-oai}
       # Negotiate public metadata by the UI language. DSpace 10 compares the
       # base language (pt), while pt_BR remains the UI/default locale.
       default__P__locale: ${DSPACE_DEFAULT_LOCALE:-pt_BR}

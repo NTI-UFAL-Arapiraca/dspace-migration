@@ -71,7 +71,12 @@ uv run extract-metadata
 uv run extract-pdfs
 ```
 
-O comando `uv run migrate` vai além desta etapa: ele também configura a hierarquia via API, gera e executa a importação no container DSpace, aplica os embargos e injeta as estatísticas. Use `--skip-docker` apenas quando os itens desta execução já tiverem sido importados e os `mapfile.txt` correspondentes existirem; use `--skip-stats` para não alterar o Solr.
+O comando `uv run migrate` vai além desta etapa: ele também configura a
+hierarquia via API, gera e executa a importação no container DSpace, aplica os
+embargos, injeta as estatísticas e reconstrói o índice OAI-PMH. Use
+`--skip-docker` apenas quando os itens desta execução já tiverem sido importados
+e os `mapfile.txt` correspondentes existirem; use `--skip-stats` para não
+alterar as estatísticas e `--skip-oai` para não reconstruir o core OAI.
 
 ## Resultado
 

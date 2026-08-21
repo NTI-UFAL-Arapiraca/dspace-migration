@@ -128,6 +128,25 @@ docker compose -p d10 -f docker-compose-dist.yml -f docker-compose-rest.yml up -
 ### URLs de Acesso Pós-Inicialização:
 - **Interface do Usuário (UI):** `http://localhost:4000/`
 - **API REST:** `http://localhost:8080/server/`
+- **OAI-PMH:** `http://localhost:8080/server/oai/request`
+
+O OAI-PMH é atendido pelo mesmo backend. Valide sua ativação com:
+
+```bash
+curl --fail \
+  'http://localhost:8080/server/oai/request?verb=Identify'
+```
+
+Depois de importar o acervo, construa o índice OAI inicial:
+
+```bash
+docker compose --env-file ../.env -p d10 -f cli.yml run --rm \
+  dspace-cli oai import -c
+```
+
+Em produção, `DSPACE_SERVER_URL` e `DSPACE_UI_URL` devem apontar para os
+endereços HTTPS públicos; `DSPACE_ADMIN_EMAIL` deve conter o contato
+institucional anunciado pelo verbo `Identify`.
 
 ## 6. Criar Conta de Administrador
 
