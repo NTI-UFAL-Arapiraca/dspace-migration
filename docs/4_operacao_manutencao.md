@@ -34,6 +34,43 @@ raiz pública e direcionar as páginas da interface ao serviço SSR na porta
 `4000`. Não sirva apenas os arquivos JavaScript do bundle Angular, pois isso
 desativa a renderização no servidor.
 
+### Ambiente local e erro 403 por origem
+
+Quando a interface for acessada por `http://localhost:4000`, mantenha também as
+URLs públicas locais no `.env`:
+
+```dotenv
+DSPACE_UI_URL=http://localhost:4000
+DSPACE_SERVER_URL=http://localhost:8080/server
+```
+
+Não misture uma interface aberta por `localhost` com `DSPACE_UI_URL` apontando
+para o domínio de produção. O backend usa essa variável como origem permitida
+para CORS e CSRF; a divergência faz as requisições do navegador retornarem HTTP
+403 e pode resultar em uma página de erro no frontend. Depois de corrigir as
+URLs, recrie o backend:
+
+```bash
+cd dspace-docker
+docker compose --env-file ../.env -p d10 \
+  -f docker-compose-dist.yml -f docker-compose-rest.yml \
+  up -d --no-deps --force-recreate dspace
+```
+
+Confirme a origem efetivamente autorizada antes de investigar cookies ou
+sessões antigas:
+
+```bash
+curl --fail -D - -o /dev/null \
+  -H 'Origin: http://localhost:4000' \
+  http://localhost:8080/server/api
+```
+
+A resposta deve ser HTTP 200 e conter
+`Access-Control-Allow-Origin: http://localhost:4000`. Em produção, substitua os
+dois endereços pelo mesmo domínio HTTPS realmente usado pelo navegador e
+recrie backend e frontend conforme descrito acima.
+
 ## 2. Sitemaps
 
 O backend atualiza os sitemaps diariamente às 01:15. O horário é configurável
