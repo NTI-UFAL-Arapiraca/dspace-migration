@@ -37,6 +37,11 @@ services:
       # Regenerate XML and HTML sitemaps every day at 01:15. The generated
       # files are persisted and proxied by Angular at /sitemap*.
       sitemap__P__cron: "${SITEMAP_CRON:-0 15 1 * * ?}"
+      # The official SEO actuator calls dspace.ui.url from inside this
+      # container. It cannot validate a localhost UI running in another
+      # container. Disable it explicitly in the local .env; when unset, keep
+      # the official production behavior enabled.
+      MANAGEMENT_HEALTH_SEO_ENABLED: "${SEO_HEALTH_ENABLED:-true}"
       # Negotiate public metadata by the UI language. DSpace 10 compares the
       # base language (pt), while pt_BR remains the UI/default locale.
       default__P__locale: ${DSPACE_DEFAULT_LOCALE:-pt_BR}

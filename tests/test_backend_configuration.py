@@ -131,6 +131,11 @@ class BackendConfigurationTests(unittest.TestCase):
         self.assertIn("- sitemaps:/dspace/sitemaps", compose)
         self.assertIn("  sitemaps:", compose)
         self.assertIn("SITEMAP_CRON=0 15 1 * * ?", env_example)
+        self.assertIn(
+            'MANAGEMENT_HEALTH_SEO_ENABLED: "${SEO_HEALTH_ENABLED:-true}"',
+            compose,
+        )
+        self.assertIn("SEO_HEALTH_ENABLED=false", env_example)
 
     def test_existing_abstract_language_migration_is_narrow_and_idempotent(self):
         sql = ABSTRACT_LANGUAGE_MIGRATION.read_text(encoding="utf-8")

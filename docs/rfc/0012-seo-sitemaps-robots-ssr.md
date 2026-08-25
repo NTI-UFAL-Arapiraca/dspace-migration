@@ -22,7 +22,10 @@ gerados no filesystem efêmero do container.
 - persistir `/dspace/sitemaps` em volume Docker;
 - manter o agendamento diário oficial às 01:15;
 - gerar os sitemaps ao final de `uv run migrate` e oferecer
-  `uv run generate-sitemaps` para execução isolada.
+  `uv run generate-sitemaps` para execução isolada;
+- permitir desativar apenas o indicador SEO do Actuator no `.env` local, pois
+  ele não consegue alcançar uma UI em outro container pela URL `localhost`;
+  quando a variável não é informada, preservar o padrão oficial habilitado.
 
 ## Implementação
 
@@ -42,4 +45,7 @@ atualiza diariamente. `DSPACE_UI_URL` deve ser a URL HTTPS pública em produçã
 pois é inserida no robots e nos sitemaps. Testes cobrem configurações, volume,
 pipeline e política de crawlers; a validação ponta a ponta exige respostas 200
 nos três arquivos e HTML de um item contendo título e metadados sem executar
-JavaScript.
+JavaScript. Desabilitar o indicador local não desabilita nenhuma dessas
+funcionalidades; evita apenas falsos negativos causados pelo isolamento de rede
+entre os containers. No ambiente público, o indicador deve ser habilitado e o
+domínio precisa ser acessível a partir do backend.

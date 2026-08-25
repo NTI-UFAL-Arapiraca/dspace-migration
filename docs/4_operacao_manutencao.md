@@ -71,6 +71,22 @@ A resposta deve ser HTTP 200 e conter
 dois endereços pelo mesmo domínio HTTPS realmente usado pelo navegador e
 recrie backend e frontend conforme descrito acima.
 
+O indicador SEO exibido em `/health` é executado pelo backend. Dentro do
+container `dspace`, `localhost:4000` aponta para o próprio backend, e não para o
+container `dspace-angular`. Por isso, o indicador oficial produz três falsos
+negativos no desenvolvimento local mesmo quando sitemap, robots e SSR estão
+funcionando. Mantenha no ambiente local:
+
+```dotenv
+SEO_HEALTH_ENABLED=false
+```
+
+Isso desativa somente o diagnóstico SEO do Actuator; não desativa sitemap,
+`robots.txt` nem SSR. Valide-os com os comandos da seção seguinte. Em produção,
+use `SEO_HEALTH_ENABLED=true` depois que `DSPACE_UI_URL` apontar para o domínio
+público e esse domínio puder ser resolvido e acessado a partir do container
+backend. Nesse cenário, `/health` deve mostrar os três resultados como `OK`.
+
 ## 2. Sitemaps
 
 O backend atualiza os sitemaps diariamente às 01:15. O horário é configurável
