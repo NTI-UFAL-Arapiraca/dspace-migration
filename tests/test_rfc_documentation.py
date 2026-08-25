@@ -20,6 +20,7 @@ class RfcDocumentationTests(unittest.TestCase):
         "0010-nome-publico-do-repositorio.md",
         "0011-endpoint-oai-pmh.md",
         "0012-seo-sitemaps-robots-ssr.md",
+        "0013-banco-geoip-geolite2.md",
     }
 
     def test_every_known_override_has_an_indexed_rfc(self):

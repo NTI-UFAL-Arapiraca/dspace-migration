@@ -44,6 +44,17 @@ SAF_BUNDLE_DIR=/caminho/absoluto/saf_bundle
 DSPACE_SAF_HOST_DIR=/caminho/absoluto/saf_bundle
 ```
 
+Informe também o caminho absoluto do banco MaxMind GeoLite2 City. O arquivo
+não faz parte do repositório e é montado somente para leitura no backend:
+
+```dotenv
+GEOLITE2_CITY_DB_PATH=/caminho/absoluto/GeoLite2-City.mmdb
+```
+
+O DSpace 10 usa o formato `.mmdb` e a propriedade
+`usage-statistics.dbfile`. O exemplo antigo `GeoLiteCity.dat` não se aplica a
+esta versão.
+
 Backend, Solr, CLI e frontend acompanham o tag `dspace-10_x`, que recebe as
 correções mais recentes da linha 10. Mantenha
 `DSPACE_VER` e `DSPACE_ANGULAR_TAG` com o mesmo valor; não use `latest` nem

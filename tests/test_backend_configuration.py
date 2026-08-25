@@ -137,6 +137,30 @@ class BackendConfigurationTests(unittest.TestCase):
         )
         self.assertIn("SEO_HEALTH_ENABLED=false", env_example)
 
+    def test_geolite2_city_database_is_required_and_mounted_read_only(self):
+        compose = (DOCKER_ROOT / "docker-compose-rest.yml").read_text(
+            encoding="utf-8"
+        )
+        env_example = (PROJECT_ROOT / ".env.example").read_text(encoding="utf-8")
+
+        self.assertIn(
+            "usage__D__statistics__P__dbfile: "
+            "/dspace/config/GeoLite2-City.mmdb",
+            compose,
+        )
+        self.assertIn(
+            "source: ${GEOLITE2_CITY_DB_PATH:?Defina "
+            "GEOLITE2_CITY_DB_PATH no .env}",
+            compose,
+        )
+        self.assertIn("target: /dspace/config/GeoLite2-City.mmdb", compose)
+        self.assertIn("read_only: true", compose)
+        self.assertIn("create_host_path: false", compose)
+        self.assertIn(
+            "GEOLITE2_CITY_DB_PATH=/caminho/absoluto/GeoLite2-City.mmdb",
+            env_example,
+        )
+
     def test_existing_abstract_language_migration_is_narrow_and_idempotent(self):
         sql = ABSTRACT_LANGUAGE_MIGRATION.read_text(encoding="utf-8")
 

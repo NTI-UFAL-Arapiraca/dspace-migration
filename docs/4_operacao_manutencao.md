@@ -181,7 +181,36 @@ Confira `repositoryName`, `baseURL`, `adminEmail`, ausência de `<error>` e a
 presença de registros ou `resumptionToken`. Itens privados, retirados ou ainda
 embargados não devem ser expostos anonimamente.
 
-## 6. Volumes e atualizações
+## 6. GeoIP e estatísticas geográficas
+
+O banco GeoLite2 City é externo ao projeto. `GEOLITE2_CITY_DB_PATH` deve apontar
+para um arquivo `.mmdb` regular e legível pelo Docker; o Compose impede a
+criação silenciosa de um diretório quando o caminho está incorreto. Valide o
+mount e a propriedade efetiva com:
+
+```bash
+docker exec dspace test -r /dspace/config/GeoLite2-City.mmdb
+docker exec dspace \
+  /dspace/bin/dspace dsprop -p usage-statistics.dbfile
+```
+
+Depois de baixar uma versão nova da base, substitua o arquivo no host e recrie
+o backend para que o leitor MaxMind seja reaberto:
+
+```bash
+cd dspace-docker
+docker compose --env-file ../.env -p d10 \
+  -f docker-compose-dist.yml -f docker-compose-rest.yml \
+  up -d --no-deps --force-recreate dspace
+```
+
+Confirme na página `/health` que GeoIP está `UP`. Endereços privados e de
+loopback, como `127.0.0.1`, não possuem localização no GeoLite2; a ausência de
+localização nesses acessos locais não significa que o banco esteja inválido.
+Não versione o `.mmdb` e mantenha sua obtenção, atualização e uso compatíveis
+com a licença e os termos da MaxMind.
+
+## 7. Volumes e atualizações
 
 Os dados não devem depender do filesystem efêmero dos containers. Preserve e
 inclua no plano de backup, conforme a política da infraestrutura:
@@ -206,13 +235,14 @@ docker compose --env-file ../.env -p d10 \
   build --pull dspace-angular
 ```
 
-## 7. Checklist após migração ou manutenção
+## 8. Checklist após migração ou manutenção
 
 - API REST responde e anuncia as URLs públicas corretas;
 - uma página de item contém título e metadados no HTML SSR;
 - `robots.txt` responde 200 e referencia os dois sitemaps;
 - sitemap XML e HTML respondem 200 e usam o domínio público;
 - OAI `Identify` e `ListRecords` respondem sem erro;
+- GeoIP aparece como `UP` e o arquivo `.mmdb` está legível no backend;
 - um PDF público baixa anonimamente e um PDF embargado continua protegido;
 - busca, home e página do item exibem apenas o resumo do idioma selecionado;
 - containers não apresentam erros recorrentes nos logs.

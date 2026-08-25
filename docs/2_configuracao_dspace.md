@@ -174,6 +174,26 @@ sem navegador, faça uma requisição a um item e confirme que título e metadad
 já constam no HTML retornado. Em produção, use a URL HTTPS pública configurada
 em `DSPACE_UI_URL` nesses testes.
 
+### GeoIP das estatísticas de uso
+
+O DSpace 10 espera um banco MaxMind DB no formato `.mmdb`. Configure no `.env`
+o arquivo GeoLite2 City obtido da MaxMind:
+
+```dotenv
+GEOLITE2_CITY_DB_PATH=/caminho/absoluto/GeoLite2-City.mmdb
+```
+
+O Compose monta esse arquivo como
+`/dspace/config/GeoLite2-City.mmdb:ro` e define internamente:
+
+```properties
+usage-statistics.dbfile = /dspace/config/GeoLite2-City.mmdb
+```
+
+O exemplo legado `dbfile = ${dspace.dir}/config/GeoLiteCity.dat` não deve ser
+usado no DSpace 10. Depois de alterar o caminho ou substituir o arquivo, recrie
+o backend e confirme o componente GeoIP em `http://localhost:4000/health`.
+
 ## 6. Criar Conta de Administrador
 
 Para realizar a importação de dados, crie uma conta de administrador rodando o comando a seguir:
