@@ -41,7 +41,7 @@ Todos estes destinos partem de `ud_biblioteca_publicacao.observacoes`. O texto p
 | Nota sobre acervo ou exemplar físico | `dc.description.note` | `acervo`, `impresso`, `biblioteca`, `BCA` |
 | Referência bibliográfica ou publicação externa | `dc.identifier.citation` | volume, número, página, ISSN, DOI, URL, revista ou anais |
 
-`dc.description.provenance` é ocultado do público pela configuração do DSpace, pois pode conter informação administrativa. Se uma observação não corresponder a uma restrição nem a uma citação, ela é preservada somente em `dc.description.note`.
+`dc.description.provenance` é ocultado do público pela configuração do DSpace, pois pode conter informação administrativa. Se uma observação não corresponder a uma restrição nem a uma citação, ela é preservada somente em `dc.description.note`. A classificação da observação como `provenance` não altera as permissões do arquivo.
 
 ## 4. Identificação e Roteamento do Item
 
@@ -75,9 +75,8 @@ O item e seus metadados continuam no DSpace; a restrição é aplicada aos bitst
 | `data_limite_embargo` igual ou anterior à data da extração | Embargo encerrado | O bitstream é importado com o acesso normal da coleção. |
 | `data_limite_embargo` preenchida, mas inválida | Erro de dado que não pode liberar o arquivo com segurança | O bitstream permanece restrito, sem liberação automática. |
 | `autorizar_publicacao = false`, sem data de embargo | Restrição sem prazo | O bitstream fica acessível apenas para administradores. |
-| Observação que indica restrição, sem data | Restrição sem prazo | O bitstream fica acessível apenas para administradores. |
 
-As decisões de acesso são registradas somente no manifesto técnico `saf_bundle/access_policies.json`. O comando `apply-embargoes` usa esse manifesto e os `mapfile.txt` para configurar as datas diretamente no DSpace. Não é gerado um CSV separado de itens embargados. Se essa etapa falhar, o arquivo permanece privado.
+As decisões de acesso dependem exclusivamente de `data_limite_embargo` e `autorizar_publicacao` e são registradas no manifesto técnico `saf_bundle/access_policies.json`. O comando `apply-embargoes` usa esse manifesto e os `mapfile.txt` para configurar as datas diretamente no DSpace. Não é gerado um CSV separado de itens embargados. Se essa etapa falhar, o arquivo permanece privado.
 
 ## 7. Estatísticas de Visualização
 

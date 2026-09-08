@@ -24,10 +24,9 @@ class AccessPolicyTests(unittest.TestCase):
         self.assertEqual("embargo", policy.access_type)
         self.assertEqual(date(2027, 3, 15), policy.start_date)
 
-    def test_expired_date_is_open_even_when_note_mentions_embargo(self):
+    def test_expired_date_is_open(self):
         policy = determine_access_policy(
             "2025-01-01",
-            provenance="Embargo até a data cadastrada",
             today=self.TODAY,
         )
 
@@ -44,7 +43,7 @@ class AccessPolicyTests(unittest.TestCase):
 
         self.assertEqual("restricted", policy.access_type)
 
-    def test_restriction_note_without_date_is_permanently_restricted(self):
+    def test_restriction_observation_does_not_change_access_policy(self):
         policy = determine_access_policy(
             None,
             True,
@@ -52,7 +51,7 @@ class AccessPolicyTests(unittest.TestCase):
             today=self.TODAY,
         )
 
-        self.assertEqual("restricted", policy.access_type)
+        self.assertIsNone(policy)
 
     def test_positive_authorization_note_does_not_create_restriction(self):
         policy = determine_access_policy(

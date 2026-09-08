@@ -206,8 +206,6 @@ def process_data(
         policy = determine_access_policy(
             row.get('data_limite_embargo'),
             row.get('autorizar_publicacao'),
-            row.get('dc.description.provenance'),
-            row.get('dc.description.note'),
         )
         access_policies[row['id_origem']] = policy
     protected_count = sum(policy is not None for policy in access_policies.values())

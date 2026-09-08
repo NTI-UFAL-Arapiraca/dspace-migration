@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -14,12 +13,6 @@ import pandas as pd
 ACCESS_POLICIES_FILENAME = "access_policies.json"
 SAF_RESTRICTED_GROUP = "Administrator"
 
-_RESTRICTION_RE = re.compile(
-    r"\b(restrito|restrição|embargo|liberação|sigilo|confidencial|"
-    r"acesso\s+restrito|somente\s+admin|sem\s+autoriza[çc][aã]o|"
-    r"n[aã]o\s+autoriza[a-zçãõ]*|autoriza[çc][aã]o\s+(pendente|negada))\b",
-    flags=re.IGNORECASE,
-)
 _FALSE_VALUES = {"0", "false", "f", "n", "no", "não", "nao"}
 
 
@@ -91,9 +84,12 @@ def determine_access_policy(
 ) -> AccessPolicy | None:
     """Determina se os anexos devem ficar embargados ou restritos.
 
-    Uma data válida é soberana: se ainda não chegou, o acesso anônimo começa
-    nela; se já chegou, o embargo terminou. Valores de data inválidos são
-    tratados de forma segura como restrição sem liberação automática.
+    A política depende exclusivamente de ``data_limite_embargo`` e
+    ``autorizar_publicacao``. Uma data válida é soberana: se ainda não chegou,
+    o acesso anônimo começa nela; se já chegou, o embargo terminou. Valores de
+    data inválidos são tratados de forma segura como restrição sem liberação
+    automática. ``provenance`` e ``note`` são aceitos apenas por
+    retrocompatibilidade e não participam da decisão.
     """
     today = today or date.today()
 
@@ -115,12 +111,6 @@ def determine_access_policy(
 
     if _is_explicit_false(authorize_value):
         return AccessPolicy("restricted", reason="Publicação não autorizada")
-
-    restriction_text = " ".join(
-        str(value) for value in (provenance, note) if _has_value(value)
-    )
-    if restriction_text and _RESTRICTION_RE.search(restriction_text):
-        return AccessPolicy("restricted", reason=restriction_text)
 
     return None
 
