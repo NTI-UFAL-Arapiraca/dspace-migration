@@ -11,7 +11,7 @@ services:
       - "${DB_PORT:-5440}:5432"
     volumes:
       - biblioteca_data:/var/lib/postgresql
-      - ./dumps:/dumps
+      - /mnt/part2/dumps:/dumps
 
 volumes:
   biblioteca_data:
