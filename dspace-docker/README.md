@@ -24,9 +24,9 @@ docker compose -p d10 -f docker-compose-dist.yml -f docker-compose-rest.yml up -
 ```
 
 O frontend não usa mais diretamente a imagem `*-dist` publicada. O
-`Dockerfile.angular` parte da imagem oficial `dspace-10_x`, sobrepõe os arquivos
+`Dockerfile.angular` parte da imagem oficial `dspace-10.1`, sobrepõe os arquivos
 locais no tema oficial `custom`, compila a distribuição e reutiliza a imagem
-oficial `dspace-10_x-dist` como runtime.
+oficial `dspace-10.1-dist` como runtime.
 
 O backend negocia o idioma público por `Accept-Language` e devolve somente a
 variante correspondente dos metadados. O qualifier do resumo em português é
@@ -89,7 +89,7 @@ versionado `frontend/overrides/robots.txt.ejs` em `/robots.txt`. Esse template
 anuncia os dois índices e não bloqueia itens, handles, comunidades ou coleções.
 
 SSR não é um processo separado: a imagem customizada reutiliza o entrypoint
-`pm2-runtime` de `dspace-10_x-dist`, que executa `dist/server/main.js`. A
+`pm2-runtime` de `dspace-10.1-dist`, que executa `dist/server/main.js`. A
 configuração local mantém `transferState` e a substituição da URL REST ativas.
 Valide o ambiente iniciado com:
 
@@ -117,10 +117,9 @@ docker compose -p d10 -f docker-compose-dist.yml -f docker-compose-rest.yml \
   up -d --force-recreate dspace-angular
 ```
 
-`DSPACE_VER` e `DSPACE_ANGULAR_TAG` usam `dspace-10_x`, o canal com as correções
-mais recentes da linha 10, e devem permanecer alinhadas. Não use `latest` nem
-`latest-test`: esses aliases podem avançar para uma versão principal
-incompatível. `DSPACE_ANGULAR_IMAGE` pode ser usada para nomear a imagem
+`DSPACE_VER` e `DSPACE_ANGULAR_TAG` usam `dspace-10.1`, lançamento estável da
+linha 10, e devem permanecer alinhadas. As tags `dspace-10_x` acompanham código
+ainda não lançado. `DSPACE_ANGULAR_IMAGE` pode ser usada para nomear a imagem
 customizada. O tag Angular precisa existir tanto na forma normal quanto com o
 sufixo `-dist` no repositório oficial de imagens.
 
