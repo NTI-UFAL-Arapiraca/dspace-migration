@@ -137,7 +137,7 @@ continuar presentes e apontar para arquivos que respondem HTTP 200.
 
 ## 4. Server-side rendering
 
-SSR é fornecido pelo runtime oficial `dspace-10_x-dist`, que inicia
+SSR é fornecido pelo runtime oficial `dspace-10.1-dist`, que inicia
 `/app/dist/server/main.js` por PM2. Mudanças no tema, componentes, patches,
 `robots.txt` ou dependências exigem um novo build; apenas recriar um container
 com uma imagem antiga não incorpora essas mudanças.
@@ -224,7 +224,7 @@ Os índices Solr, OAI e sitemaps podem ser reconstruídos, mas banco e assetstor
 precisam ser restaurados como um conjunto consistente. Não use
 `docker compose down -v` em produção: a opção `-v` remove os volumes.
 
-Ao atualizar o tag `dspace-10_x`, execute a suíte e o build completo, pois os
+Ao atualizar a versão do DSpace, execute a suíte e o build completo, pois os
 patches do frontend têm guardas que falham quando o fonte oficial muda:
 
 ```bash

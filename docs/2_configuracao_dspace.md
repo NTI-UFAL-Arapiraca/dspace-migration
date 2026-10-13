@@ -81,15 +81,16 @@ O SQL é idempotente e limitado a `dc.description.abstract`; ele não modifica
 ## 4. Configurar o Frontend e o Tema
 
 O frontend é compilado por `dspace-docker/Dockerfile.angular`. Ele usa o código
-fonte presente na imagem oficial `dspace/dspace-angular:dspace-10_x`, sobrepõe
+fonte presente na imagem oficial `dspace/dspace-angular:dspace-10.1`, sobrepõe
 os arquivos mantidos em `frontend/themes/custom/` e executa o build de
 produção. Dessa forma, o projeto mantém somente suas diferenças em vez de uma
 cópia completa do repositório DSpace Angular.
 
-Backend, Solr, CLI, build e runtime Angular usam por padrão `dspace-10_x`, com
-as correções mais recentes da linha 10. As variáveis `DSPACE_VER` e
-`DSPACE_ANGULAR_TAG` permitem mudar o tag, mas precisam continuar na mesma
-versão. Não use `latest` ou `latest-test`, pois podem resolver para o DSpace 11.
+Backend, Solr, CLI, build e runtime Angular usam por padrão o lançamento
+`dspace-10.1`. As variáveis `DSPACE_VER` e `DSPACE_ANGULAR_TAG` permitem mudar
+o tag, mas precisam continuar na mesma versão. As tags `dspace-10_x` incluem
+código ainda não lançado; não use `latest` ou `latest-test`, pois podem
+resolver para uma versão principal diferente.
 
 O arquivo `frontend/config/config.prod.yml` é montado no container e carregado
 por `DSPACE_APP_CONFIG_PATH`. Ele ativa o tema `custom` globalmente e pode
@@ -169,7 +170,7 @@ curl --fail http://localhost:4000/sitemap_index.html
 ```
 
 O serviço `dspace-angular` executa `/app/dist/server/main.js` pelo runtime
-oficial `dspace-10_x-dist`; portanto, as páginas públicas usam SSR. Para testar
+oficial `dspace-10.1-dist`; portanto, as páginas públicas usam SSR. Para testar
 sem navegador, faça uma requisição a um item e confirme que título e metadados
 já constam no HTML retornado. Em produção, use a URL HTTPS pública configurada
 em `DSPACE_UI_URL` nesses testes.
@@ -204,12 +205,22 @@ docker compose -p d10 -f cli.yml run --rm dspace-cli create-administrator -e tes
 
 ## 7. Registrar Campos de Metadados Customizados
 
-Alguns metadados exigidos pela migração (como `dc.description.degree`, `dc.description.note`, `dc.contributor.coadvisor` e `dc.contributor.referee`) não vêm nativamente no esquema padrão do DSpace e precisam ser cadastrados.
+Cadastre os cinco campos locais usados pela migração com o XML versionado em
+`config/registries/migration-metadata.xml`. O script usa o CLI oficial
+`registry-loader -m`, sem SQL direto e sem exigir cadastro manual na interface.
+`dc.contributor.advisor` já é padrão; os campos sem uso `dc.publisher.place` e
+`dc.type.degree` não são mais cadastrados.
 
-Na raiz do repositório da migração, execute o script em `scripts/register_custom_fields.sh` para injetar estes campos no banco de dados do DSpace:
+Na raiz do repositório da migração, informe o nome ou ID do container do
+**backend DSpace** iniciado (não o container PostgreSQL):
 
 ```bash
-chmod +x scripts/register_custom_fields.sh
-./scripts/register_custom_fields.sh dspacedb
+./scripts/register_custom_fields.sh NOME_OU_ID_DO_CONTAINER_DSPACE
 ```
-*(Onde `dspacedb` é o nome do container Postgres do DSpace).*
+Use `docker ps` para identificar o container. O padrão sem argumento é
+`DSPACE_CONTAINER` do ambiente ou `dspace`. Execute antes da importação SAF.
+Campos existentes são preservados; repetir o cadastro não atualiza suas notas
+de escopo nem exclui campos antigos.
+
+Veja [Metadados customizados](metadados_customizados.md) para o dicionário dos
+campos, execução em produção, instalações já migradas e limites do cadastro.

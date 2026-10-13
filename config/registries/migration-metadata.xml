@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Extensões locais usadas pelo SAF. O esquema dc já deve existir no DSpace.
+     Não declarar dc-schema: preserva o namespace instalado.
+     Ver docs/metadados_customizados.md antes de mudar nomes ou significados. -->
+<dspace-dc-types>
+  <dc-type>
+    <schema>dc</schema>
+    <element>description</element>
+    <qualifier>degree</qualifier>
+    <scope_note>Nome do curso ou programa de origem do trabalho acadêmico. Convenção local da migração: não representa o grau acadêmico (graduação, mestrado ou doutorado).</scope_note>
+  </dc-type>
+  <dc-type>
+    <schema>dc</schema>
+    <element>publisher</element>
+    <qualifier>department</qualifier>
+    <scope_note>Nome do campus de origem, conforme o cadastro legado. Convenção local da migração: não representa necessariamente um departamento ou uma editora.</scope_note>
+  </dc-type>
+  <dc-type>
+    <schema>dc</schema>
+    <element>contributor</element>
+    <qualifier>coadvisor</qualifier>
+    <scope_note>Coorientador do trabalho acadêmico, no formato Sobrenome, Nome. Registrar um valor por pessoa.</scope_note>
+  </dc-type>
+  <dc-type>
+    <schema>dc</schema>
+    <element>contributor</element>
+    <qualifier>referee</qualifier>
+    <scope_note>Membro avaliador da banca examinadora, no formato Sobrenome, Nome. Registrar um valor por pessoa.</scope_note>
+  </dc-type>
+  <dc-type>
+    <schema>dc</schema>
+    <element>description</element>
+    <qualifier>note</qualifier>
+    <scope_note>Observação geral sobre o item, incluindo localização de exemplar físico. Não destinar informações confidenciais ou notas administrativas de restrição a este campo.</scope_note>
+  </dc-type>
+</dspace-dc-types>

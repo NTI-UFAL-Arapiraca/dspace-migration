@@ -4,6 +4,12 @@ Este documento descreve o que o pipeline realmente migra hoje. As fontes de verd
 
 O fluxo parte do banco PostgreSQL legado `biblioteca`, gera um pacote SAF e importa os itens no DSpace. Alguns dados não viram metadados Dublin Core: eles são usados para roteamento, controle de acesso, arquivos ou estatísticas.
 
+O cadastro dos cinco campos locais e suas definições está documentado em
+[Metadados customizados](metadados_customizados.md), com XML versionado e
+execução pelo CLI oficial do DSpace. Orientador usa um campo padrão;
+`dc.publisher.place` e `dc.type.degree`, sem uso no fluxo atual, foram retirados
+do cadastro.
+
 ## 1. Metadados Descritivos do Item
 
 | Dado migrado | Origem | Destino no DSpace | Tratamento aplicado |

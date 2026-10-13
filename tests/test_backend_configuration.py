@@ -24,11 +24,11 @@ class BackendConfigurationTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertIn("dspace:${DSPACE_VER:-dspace-10_x}", rest_compose)
-        self.assertIn("dspace-solr:${DSPACE_VER:-dspace-10_x}", rest_compose)
-        self.assertIn("dspace-cli:${DSPACE_VER:-dspace-10_x}", cli_compose)
-        self.assertEqual(2, frontend_compose.count("${DSPACE_ANGULAR_TAG:-dspace-10_x}"))
-        self.assertIn("ARG DSPACE_ANGULAR_TAG=dspace-10_x", dockerfile)
+        self.assertIn("dspace:${DSPACE_VER:-dspace-10.1}", rest_compose)
+        self.assertIn("dspace-solr:${DSPACE_VER:-dspace-10.1}", rest_compose)
+        self.assertIn("dspace-cli:${DSPACE_VER:-dspace-10.1}", cli_compose)
+        self.assertEqual(2, frontend_compose.count("${DSPACE_ANGULAR_TAG:-dspace-10.1}"))
+        self.assertIn("ARG DSPACE_ANGULAR_TAG=dspace-10.1", dockerfile)
 
         all_dspace_config = "\n".join(
             (rest_compose, cli_compose, frontend_compose, dockerfile)

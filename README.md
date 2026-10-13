@@ -55,10 +55,10 @@ O DSpace 10 usa o formato `.mmdb` e a propriedade
 `usage-statistics.dbfile`. O exemplo antigo `GeoLiteCity.dat` não se aplica a
 esta versão.
 
-Backend, Solr, CLI e frontend acompanham o tag `dspace-10_x`, que recebe as
-correções mais recentes da linha 10. Mantenha
-`DSPACE_VER` e `DSPACE_ANGULAR_TAG` com o mesmo valor; não use `latest` nem
-`latest-test`, pois esses aliases podem apontar para o DSpace 11.
+Backend, Solr, CLI e frontend usam o lançamento `dspace-10.1`. Mantenha
+`DSPACE_VER` e `DSPACE_ANGULAR_TAG` alinhadas nesse valor. As imagens com tags
+`dspace-10_x` acompanham código ainda não lançado; `latest` e `latest-test`
+também não são usadas porque podem avançar para outra versão principal.
 
 ### 2. Disponibilizar o banco de origem
 
@@ -106,13 +106,17 @@ docker compose --env-file ../.env -p d10 -f cli.yml run --rm \
 
 ### 4. Cadastrar os campos customizados
 
-Volte à raiz do repositório e execute o cadastro idempotente dos campos usados
-pela migração, incluindo orientador, coorientador e membros da banca:
+Volte à raiz do repositório e registre os cinco campos locais usados pela
+migração pelo CLI oficial do DSpace. Informe o nome ou ID do container do
+backend, obtido com `docker ps` (não o PostgreSQL):
 
 ```bash
 cd ..
-./scripts/register_custom_fields.sh dspacedb
+./scripts/register_custom_fields.sh NOME_OU_ID_DO_CONTAINER_DSPACE
 ```
+
+O XML e o [dicionário dos campos](docs/metadados_customizados.md) estão
+versionados. O cadastro preserva campos existentes e não exige a interface.
 
 ### 5. Executar a migração completa
 
@@ -259,7 +263,8 @@ O projeto é empacotado via **`uv`** com código estruturado em `src/dspace_migr
 - **`dspace-organization/`**: Configuração da estrutura organizacional do DSpace.
   - `communities.json` — Árvore de comunidades e coleções a criar.
   - `map.json` — Mapeamento de nomes antigos de curso para coleções destino.
-- **[`scripts/register_custom_fields.sh`](scripts/register_custom_fields.sh)**: Script para cadastro dos campos customizados no banco do DSpace.
+- **[`scripts/register_custom_fields.sh`](scripts/register_custom_fields.sh)**: Cadastro dos campos pelo CLI oficial `registry-loader`, com o [XML versionado](config/registries/migration-metadata.xml).
+- **[Metadados customizados](docs/metadados_customizados.md)**: Significado dos campos, execução e manutenção do registro.
 - **[`scripts/init-db.sh`](scripts/init-db.sh)**: Script para subir o banco legado e carregar os dumps.
 - **[`biblioteca-compose.yml`](biblioteca-compose.yml)**: Docker Compose do banco PostgreSQL legado.
 - **[`dspace-docker/`](dspace-docker/)**: Configuração Docker da instância do DSpace.
