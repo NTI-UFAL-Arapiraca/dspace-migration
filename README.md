@@ -2,6 +2,13 @@
 
 Este projeto automatiza o processo de extração, limpeza, transformação de metadados e empacotamento de acervo acadêmico (Trabalhos de Conclusão de Curso e Artigos Científicos) legado de um banco relacional PostgreSQL (ERP Odoo) para o formato padrão **SAF (Simple Archive Format)** aceito nativamente pelo repositório **DSpace**.
 
+Para executar a atualização e a migração em produção, siga o
+[passo a passo](docs/6_passo_a_passo_migracao.md), com os comandos na ordem.
+
+Para a preparação completa do servidor, pessoas e formulários, comece pelo
+[guia do DSpace acadêmico](../dspace-bca/docs/guia-dspace-academico.md).
+Os projetos `dspace-migration` e `dspace-bca` devem ficar lado a lado.
+
 ---
 
 ## Objetivo e Contexto
@@ -11,7 +18,8 @@ A base de origem é composta por cerca de 40.000 registros mantidos pela Bibliot
 2. **Extração Otimizada de PDFs Binários**: Busca e gravação física dos arquivos PDFs (armazenados como `bytea` no PostgreSQL) nas respetivas pastas SAF de cada item, com suporte completo a múltiplos anexos.
 3. **Roteamento por Curso/Polo**: Cada publicação é encaminhada automaticamente para a coleção correta no DSpace, com base no seu curso de origem (`map.json`), criando a hierarquia de comunidades/coleções dinamicamente via API REST.
 4. **Controle de acesso**: PDFs embargados ou restritos entram privados; embargos com data futura recebem uma política de liberação automática após a importação.
-5. **Estatísticas históricas**: As contagens legadas de visualizações podem ser recriadas no core de estatísticas do Solr.
+5. **Pessoas e vínculos**: Criação de entidades Person por ID legado e associação de autoria, orientação, coorientação e banca, sem contas de acesso.
+6. **Estatísticas históricas**: As contagens legadas de visualizações podem ser recriadas no core de estatísticas do Solr.
 
 ---
 
@@ -78,50 +86,49 @@ diferentes. Se o volume já estiver restaurado, basta iniciá-lo:
 docker compose -p biblioteca-migracao -f biblioteca-compose.yml up -d
 ```
 
-### 3. Iniciar o DSpace
+### 3. Iniciar o DSpace de desenvolvimento
+
+No projeto irmão `dspace-bca`, prepare `.env.development` conforme seu README,
+com a pasta SAF igual à da migração. O ambiente `d10dev` é isolado da produção:
 
 ```bash
-cd dspace-docker
-docker compose --env-file ../.env -p d10 \
-  -f docker-compose-dist.yml -f docker-compose-rest.yml \
-  up -d --build
+cd ../dspace-bca
+docker compose --env-file .env.development -p d10dev \
+  -f docker-compose-rest.yml -f docker-compose-dev.yml up -d --build
 ```
 
-Esse comando inicia o frontend, a API REST, o PostgreSQL e o Solr. Aguarde a
-API responder antes de continuar:
+Aguarde a API em `http://localhost:8080/server/api`. Se ainda não houver
+administrador, crie-o interativamente e preencha `DSPACE_API_USER` e
+`DSPACE_API_PASSWORD` no `.env` da migração:
 
 ```bash
-curl --fail http://localhost:8080/server/api
+docker compose --env-file .env.development -p d10dev \
+  -f docker-compose-rest.yml -f docker-compose-dev.yml \
+  exec dspace /dspace/bin/dspace create-administrator
 ```
 
-Em seguida, ainda em `dspace-docker/`, crie o administrador com as mesmas
-credenciais configuradas em `DSPACE_API_USER` e `DSPACE_API_PASSWORD`. O
-exemplo abaixo corresponde aos valores padrão do `.env.example`:
+### 4. Preparar metadados e pessoas
+
+Ainda em `dspace-bca`, execute:
 
 ```bash
-docker compose --env-file ../.env -p d10 -f cli.yml run --rm \
-  dspace-cli create-administrator \
-  -e test@test.edu -f admin -l user -p admin -c pt_BR
+bash scripts/prepare-academic.sh --development --project-name d10dev \
+  --env-file .env.development --migration-env-file ../dspace-migration/.env
+
+docker compose --env-file .env.development -p d10dev \
+  -f docker-compose-rest.yml -f docker-compose-dev.yml restart dspace
+cd ../dspace-migration
 ```
 
-### 4. Cadastrar os campos customizados
+O comando registra os seis campos, inicializa os tipos e cria/reutiliza a
+coleção Person, salvando seu UUID no `.env` da migração. A implantação já
+carrega os arquivos de autoridade; não é necessário copiar plugins.
+Para produção e retomada de lotes existentes, use o guia completo.
 
-Volte à raiz do repositório e registre os cinco campos locais usados pela
-migração pelo CLI oficial do DSpace. Informe o nome ou ID do container do
-backend, obtido com `docker ps` (não o PostgreSQL):
-
-```bash
-cd ..
-./scripts/register_custom_fields.sh NOME_OU_ID_DO_CONTAINER_DSPACE
-```
-
-O XML e o [dicionário dos campos](docs/metadados_customizados.md) estão
-versionados. O cadastro preserva campos existentes e não exige a interface.
-
-### 5. Executar a migração completa
+### 5. Executar a migração dos trabalhos e pessoas
 
 ```bash
-uv run migrate
+uv run migrate --docker-container d10dev-dspace --skip-stats
 ```
 
 O comando realiza, nesta ordem:
@@ -131,9 +138,10 @@ O comando realiza, nesta ordem:
 3. criação/reutilização das comunidades e coleções pela API REST;
 4. geração e execução de `import_all.sh` dentro do container `dspace`;
 5. aplicação das políticas de embargo aos bitstreams;
-6. injeção das estatísticas históricas no Solr;
-7. reconstrução do índice OAI-PMH no core `oai` do Solr;
-8. geração dos sitemaps XML e HTML para mecanismos de busca.
+6. criação/reutilização de pessoas e aplicação dos vínculos bibliográficos;
+7. injeção opcional das estatísticas históricas no Solr (adiada com `--skip-stats`);
+8. reconstrução do índice OAI-PMH no core `oai` do Solr;
+9. geração dos sitemaps XML e HTML para mecanismos de busca.
 
 Ao terminar, revise `routing_report.csv`, `pdf_extraction_issues.csv` (se
 existir) e um item bilíngue na interface em `http://localhost:4000`.
@@ -177,9 +185,10 @@ O endpoint público será
 indexável dos PDFs, execute:
 
 ```bash
-cd dspace-docker
-docker compose --env-file ../.env -p d10 -f cli.yml run --rm \
-  dspace-cli filter-media
+cd ../dspace-bca
+docker compose --env-file .env.development -p d10dev \
+  -f docker-compose-rest.yml -f docker-compose-dev.yml \
+  exec -T dspace /dspace/bin/dspace filter-media
 ```
 
 > [!IMPORTANT]
@@ -245,16 +254,18 @@ O projeto é empacotado via **`uv`** com código estruturado em `src/dspace_migr
 | `uv run setup-dspace` | Cria a hierarquia de comunidades e coleções no DSpace via API REST (com base em `communities.json`), salvando os UUIDs em `collection_uuids.json`. |
 | `uv run generate-import-script` | Gera o script `import_all.sh` com um comando de importação por coleção, pronto para executar dentro do container Docker. |
 | `uv run apply-embargoes` | Aplica no DSpace as datas de liberação dos PDFs embargados, após a importação SAF. |
+| `uv run apply-people` | Cria/reutiliza Person e vincula os trabalhos; `--dry-run` apenas inspeciona. Também converte curso/campus dos lotes antigos. |
 | `uv run inject-stats` | Injeta no Solr as contagens históricas de visualizações dos itens importados. |
 | `uv run rebuild-oai` | Limpa e reconstrói o índice OAI-PMH a partir dos itens do DSpace. |
 | `uv run generate-sitemaps` | Gera os índices XML e HTML anunciados em `robots.txt`. |
-| `uv run migrate` | Executa o pipeline completo: extração, hierarquia, importação SAF, embargos, estatísticas, OAI e sitemaps. |
+| `uv run migrate` | Executa o pipeline completo: extração, hierarquia, importação SAF, embargos, pessoas, estatísticas, OAI e sitemaps. |
 
 ---
 
 ## Estrutura de Arquivos
 
 - **`src/dspace_migration/`**: Código-fonte do pacote Python.
+  - `people.py` — Manifesto de identidades, criação de Person e aplicação retomável de vínculos.
   - `metadata.py` — Extração e higienização de metadados, geração SAF hierárquica.
   - `pdfs.py` — Extração de PDFs binários e conversão PDF/A.
   - `organization.py` — Gestão da hierarquia DSpace (API REST) e roteamento de cursos.
@@ -267,7 +278,7 @@ O projeto é empacotado via **`uv`** com código estruturado em `src/dspace_migr
 - **[Metadados customizados](docs/metadados_customizados.md)**: Significado dos campos, execução e manutenção do registro.
 - **[`scripts/init-db.sh`](scripts/init-db.sh)**: Script para subir o banco legado e carregar os dumps.
 - **[`biblioteca-compose.yml`](biblioteca-compose.yml)**: Docker Compose do banco PostgreSQL legado.
-- **[`dspace-docker/`](dspace-docker/)**: Configuração Docker da instância do DSpace.
+- **[`../dspace-bca/`](../dspace-bca/)**: Projeto irmão com a implantação Docker da instância do DSpace.
 - **[`docs/`](docs/)**: Guia detalhado passo a passo da migração.
 
 ---

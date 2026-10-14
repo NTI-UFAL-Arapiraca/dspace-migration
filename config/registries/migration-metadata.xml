@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Extensões locais usadas pelo SAF. O esquema dc já deve existir no DSpace.
-     Não declarar dc-schema: preserva o namespace instalado.
+<!-- Extensões usadas pelo SAF. Os esquemas dc e local já existem no DSpace 10.1.
+     Não declarar dc-schema: preserva os namespaces instalados.
      Ver docs/metadados_customizados.md antes de mudar nomes ou significados. -->
 <dspace-dc-types>
   <dc-type>
-    <schema>dc</schema>
-    <element>description</element>
-    <qualifier>degree</qualifier>
-    <scope_note>Nome do curso ou programa de origem do trabalho acadêmico. Convenção local da migração: não representa o grau acadêmico (graduação, mestrado ou doutorado).</scope_note>
+    <schema>local</schema>
+    <element>course</element>
+    <qualifier>name</qualifier>
+    <scope_note>Nome do curso de origem conforme ud_curso.name; não representa grau acadêmico nem distingue um programa de pós-graduação.</scope_note>
   </dc-type>
   <dc-type>
-    <schema>dc</schema>
-    <element>publisher</element>
-    <qualifier>department</qualifier>
-    <scope_note>Nome do campus de origem, conforme o cadastro legado. Convenção local da migração: não representa necessariamente um departamento ou uma editora.</scope_note>
+    <schema>local</schema>
+    <element>campus</element>
+    <qualifier>name</qualifier>
+    <scope_note>Nome do campus de origem conforme ud_campus.name; não representa departamento nem editora.</scope_note>
   </dc-type>
   <dc-type>
     <schema>dc</schema>
@@ -32,5 +32,11 @@
     <element>description</element>
     <qualifier>note</qualifier>
     <scope_note>Observação geral sobre o item, incluindo localização de exemplar físico. Não destinar informações confidenciais ou notas administrativas de restrição a este campo.</scope_note>
+  </dc-type>
+  <dc-type>
+    <schema>local</schema>
+    <element>identifier</element>
+    <qualifier>legacy</qualifier>
+    <scope_note>Identificador da pessoa na origem no formato odoo:TABELA:ID. Usado para retomada e conciliação; não é uma conta de acesso.</scope_note>
   </dc-type>
 </dspace-dc-types>

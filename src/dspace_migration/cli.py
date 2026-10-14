@@ -3,6 +3,7 @@ import argparse
 import subprocess
 from pathlib import Path
 from dspace_migration.metadata import process_data
+from dspace_migration.people import apply_people
 from dspace_migration.pdfs import extract_pdfs
 from dspace_migration.embargoes import apply_embargoes
 from dspace_migration.organization import setup_dspace, generate_import_script
@@ -126,6 +127,22 @@ def run_apply_embargoes():
         )
     except Exception as e:
         print(f"✘ Erro fatal ao aplicar embargos: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def run_apply_people():
+    """Cria Person e associa participações após a importação SAF."""
+    parser = argparse.ArgumentParser(description="Migra pessoas e vínculos bibliográficos, sem criar contas.")
+    parser.add_argument("--saf-bundle-dir", default=None)
+    parser.add_argument("--collection-uuid", default=None, help="Coleção Person; padrão: DSPACE_PERSON_COLLECTION_UUID")
+    parser.add_argument("--dry-run", action="store_true", help="Inspeciona sem alterar o DSpace nem mapas locais")
+    args, _ = parser.parse_known_args()
+    try:
+        result = apply_people(args.saf_bundle_dir, args.collection_uuid, dry_run=args.dry_run)
+        print(f"Pessoas: {result.created} novas, {result.reused} reutilizadas; "
+              f"trabalhos: {result.items_updated} atualizados, {result.items_unchanged} sem alterações.")
+    except Exception as exc:
+        print(f"Erro ao aplicar pessoas: {exc}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -288,10 +305,12 @@ def migrate_all():
         default=None,
         help="Limita o número de itens processados nas etapas de extração (para testes)",
     )
+    parser.add_argument("--skip-people", action="store_true", help="Adia a criação de pessoas e vínculos")
     args, _ = parser.parse_known_args()
 
     total_steps = (
         5
+        + int(not args.skip_people)
         + int(not args.skip_docker)
         + int(not args.skip_stats)
         + int(not args.skip_oai)
@@ -382,6 +401,19 @@ def migrate_all():
     except Exception as e:
         print(f"✘ Erro fatal ao aplicar embargos: {e}", file=sys.stderr)
         sys.exit(1)
+
+    if not args.skip_people:
+        print(f"\n[{step}/{total_steps}] Criando pessoas e vinculando participações...")
+        step += 1
+        try:
+            result = apply_people()
+            print(f"  Pessoas: {result.created} novas, {result.reused} reutilizadas; "
+                  f"{result.items_updated} trabalhos atualizados.")
+        except Exception as exc:
+            print(f"Erro ao aplicar pessoas: {exc}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        print("\nPessoas e vínculos: PULADOS (--skip-people)")
 
     # ── Etapa 6: Injeção de estatísticas ─────────────────────────────────────
     if not args.skip_stats:

@@ -4,7 +4,7 @@ Este documento descreve o que o pipeline realmente migra hoje. As fontes de verd
 
 O fluxo parte do banco PostgreSQL legado `biblioteca`, gera um pacote SAF e importa os itens no DSpace. Alguns dados não viram metadados Dublin Core: eles são usados para roteamento, controle de acesso, arquivos ou estatísticas.
 
-O cadastro dos cinco campos locais e suas definições está documentado em
+O cadastro dos seis campos locais e suas definições está documentado em
 [Metadados customizados](metadados_customizados.md), com XML versionado e
 execução pelo CLI oficial do DSpace. Orientador usa um campo padrão;
 `dc.publisher.place` e `dc.type.degree`, sem uso no fluxo atual, foram retirados
@@ -21,8 +21,8 @@ do cadastro.
 | Data de defesa | `ud_biblioteca_publicacao.data_defesa` | `dc.date.issued` | Mantida no formato retornado pelo PostgreSQL. `dc.date.submitted` não é gerado pela migração. |
 | Número de páginas | `ud_biblioteca_publicacao.numero_paginas` | `dc.format.extent` | Migrado como texto. |
 | Tipo de documento | `ud_biblioteca_publicacao.tipo_id` → `ud_biblioteca_publicacao_tipo.name` | `dc.type` | Mantém a denominação existente na base. |
-| Curso | `ud_biblioteca_publicacao.curso_id` → `ud_curso.name` | `dc.description.degree` | Também é usado para escolher a coleção de destino; veja a seção 4. |
-| Campus/departamento | `ud_biblioteca_publicacao.campus_id` → `ud_campus.name` | `dc.publisher.department` | Mantém a denominação existente na base. |
+| Curso | `ud_biblioteca_publicacao.curso_id` → `ud_curso.name` | `local.course.name` | Também é usado para escolher a coleção de destino; veja a seção 4. |
+| Campus/departamento | `ud_biblioteca_publicacao.campus_id` → `ud_campus.name` | `local.campus.name` | Mantém a denominação existente na base. |
 | Palavras-chave | relação `publicacao_p_chave_rel` → `ud_biblioteca_p_chave.name` | `dc.subject` | Cada palavra-chave vira um valor separado no XML. |
 | Idioma do documento | Valor definido pela migração | `dc.language.iso` | Todos os itens recebem `pt_BR`, indicando português do Brasil. Não existe uma coluna de idioma consultada na origem. |
 
@@ -35,7 +35,11 @@ do cadastro.
 | Coorientadores | `publicacao_coorientador_rel` → `ud_biblioteca_publicacao_orientador` (`ultimo_nome`, `name`) | `dc.contributor.coadvisor` | `Sobrenome, Nome`; um valor por coorientador. |
 | Membros avaliadores da banca | `publicacao_membro_banca_rel` → `ud_biblioteca_publicacao_orientador` (`ultimo_nome`, `name`) | `dc.contributor.referee` | `Sobrenome, Nome`; um valor por avaliador. |
 
-Os valores múltiplos são agregados pela consulta SQL com o separador interno `||` e voltam a ser separados na geração do `dublin_core.xml`.
+O SQL também exporta a coluna estruturada `pessoas`, com tabela e ID de
+origem para cada participação. Ela gera o manifesto `people.json` e os
+textos SAF. Após a importação, `apply-people` cria/reutiliza entidades Person
+por identificador de origem e grava seus UUIDs como autoridades nos campos.
+Não cria EPersons. Veja [Pessoas e vínculos](5_pessoas_e_vinculos.md).
 
 ## 3. Observações, Citações e Notas Internas
 
@@ -115,4 +119,7 @@ Uma observação livre pode conter DOI, URL ou dados de periódico e ser classif
 | `saf_bundle/access_policies.json` | Manifesto de embargos e restrições por ID de origem. |
 | `routing_report.csv` | Curso, coleção de destino e itens sem mapeamento. |
 | `pdf_extraction_issues.csv` | Anomalias de binário, nome, gravação ou conversão PDF/A. |
+| `saf_bundle/people.json` | Pessoas e participações por ID de origem e papel. |
+| `saf_bundle/people-map.json` | UUIDs de pessoas e destino da aplicação. |
+| `saf_bundle/**/metadata_local.xml` | Curso e campus no esquema local. |
 | `mapfile.txt` em cada coleção | Relação entre `item_<id>` e handle gerada pelo importador do DSpace. |

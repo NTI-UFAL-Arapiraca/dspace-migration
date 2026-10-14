@@ -1,0 +1,29 @@
+# Referência para instalações próprias. O dspace-bca já carrega a configuração
+# completa em backend/config/people-authority.cfg; não copie este exemplo para
+# o container da implantação integrada. Não é aplicado pelo pipeline.
+# Usar em destino preparado para Authority Framework. Não converter relações
+# tradicionais existentes apenas mudando esta propriedade.
+relationship.enable-virtual-metadata = false
+
+# Acrescentar à lista de plugins existente, preservando outros plugins usados.
+plugin.named.org.dspace.content.authority.ChoiceAuthority = \
+    org.dspace.content.authority.EPersonAuthority = EPersonAuthority, \
+    org.dspace.content.authority.ItemAuthority = MigrationPersonAuthority
+cris.ItemAuthority.MigrationPersonAuthority.entityType = Person
+
+choices.plugin.dc.contributor.author = MigrationPersonAuthority
+choices.presentation.dc.contributor.author = suggest
+authority.controlled.dc.contributor.author = true
+choices.plugin.dc.contributor.advisor = MigrationPersonAuthority
+choices.presentation.dc.contributor.advisor = suggest
+authority.controlled.dc.contributor.advisor = true
+choices.plugin.dc.contributor.coadvisor = MigrationPersonAuthority
+choices.presentation.dc.contributor.coadvisor = suggest
+authority.controlled.dc.contributor.coadvisor = true
+choices.plugin.dc.contributor.referee = MigrationPersonAuthority
+choices.presentation.dc.contributor.referee = suggest
+authority.controlled.dc.contributor.referee = true
+
+# Em config/modules/rest.cfg, acrescentar relationship.enable-virtual-metadata
+# à lista rest.properties.exposed já existente, sem substituir os demais itens.
+# O apply-people consulta essa propriedade para validar o modelo do destino.

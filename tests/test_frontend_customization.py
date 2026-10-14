@@ -4,6 +4,8 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DOCKER_ROOT = PROJECT_ROOT / "dspace-docker"
+if not DOCKER_ROOT.exists():
+    DOCKER_ROOT = PROJECT_ROOT.parent / "dspace-bca"
 
 
 class FrontendCustomizationTests(unittest.TestCase):

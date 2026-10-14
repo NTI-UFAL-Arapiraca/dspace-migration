@@ -20,10 +20,50 @@ SELECT
 
     -- Metadados de estrutura acadêmica (1:N)
     t.name AS "dc.type",
-    c.name AS "dc.description.degree",
-    camp.name AS "dc.publisher.department",
+    c.name AS "local.course.name",
+    camp.name AS "local.campus.name",
     -- Nome cru do curso para roteamento (NÃO incluído no dublin_core.xml)
     c.name AS "curso_nome",
+
+    -- Identidade bibliográfica: preserva tabela, ID, nomes e papel.
+    jsonb_build_object(
+        'dc.contributor.author', COALESCE((
+            SELECT jsonb_agg(jsonb_build_object(
+                'source', 'ud_biblioteca_publicacao_autor', 'id', aut.id,
+                'given_name', aut.name, 'family_name', aut.ultimo_nome
+            ) ORDER BY aut.ultimo_nome, aut.name, aut.id)
+            FROM ud_biblioteca_publicacao_autores pa
+            JOIN ud_biblioteca_publicacao_autor aut ON aut.id = pa.autor_id
+            WHERE pa.pub_id = p.id
+        ), '[]'::jsonb),
+        'dc.contributor.advisor', COALESCE((
+            SELECT jsonb_agg(jsonb_build_object(
+                'source', 'ud_biblioteca_publicacao_orientador', 'id', ori.id,
+                'given_name', ori.name, 'family_name', ori.ultimo_nome
+            ) ORDER BY ori.ultimo_nome, ori.name, ori.id)
+            FROM publicacao_orientador_rel por
+            JOIN ud_biblioteca_publicacao_orientador ori ON ori.id = por.ud_biblioteca_publicacao_orientador_id
+            WHERE por.ud_biblioteca_publicacao_id = p.id
+        ), '[]'::jsonb),
+        'dc.contributor.coadvisor', COALESCE((
+            SELECT jsonb_agg(jsonb_build_object(
+                'source', 'ud_biblioteca_publicacao_orientador', 'id', coori.id,
+                'given_name', coori.name, 'family_name', coori.ultimo_nome
+            ) ORDER BY coori.ultimo_nome, coori.name, coori.id)
+            FROM publicacao_coorientador_rel pco
+            JOIN ud_biblioteca_publicacao_orientador coori ON coori.id = pco.ud_biblioteca_publicacao_orientador_id
+            WHERE pco.ud_biblioteca_publicacao_id = p.id
+        ), '[]'::jsonb),
+        'dc.contributor.referee', COALESCE((
+            SELECT jsonb_agg(jsonb_build_object(
+                'source', 'ud_biblioteca_publicacao_orientador', 'id', banca.id,
+                'given_name', banca.name, 'family_name', banca.ultimo_nome
+            ) ORDER BY banca.ultimo_nome, banca.name, banca.id)
+            FROM publicacao_membro_banca_rel pmb
+            JOIN ud_biblioteca_publicacao_orientador banca ON banca.id = pmb.ud_biblioteca_publicacao_orientador_id
+            WHERE pmb.ud_biblioteca_publicacao_id = p.id
+        ), '[]'::jsonb)
+    ) AS "pessoas",
 
     -- Relacionamentos Muitos-para-Muitos (N:N) agrupados com separador '||'
     (

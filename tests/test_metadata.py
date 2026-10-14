@@ -29,14 +29,26 @@ class MetadataPipelineTests(unittest.TestCase):
             "data_limite_embargo": "2099-01-01",
             "autorizar_publicacao": True,
             "dc.type": "TCC",
-            "dc.description.degree": "Curso Teste",
-            "dc.publisher.department": "Campus Teste",
+            "local.course.name": "Curso Teste",
+            "local.campus.name": "Campus Teste",
             "curso_nome": "Curso Teste",
             "dc.contributor.author": "Silva, Ana||Souza, Beto",
             "dc.contributor.advisor": None,
             "dc.contributor.coadvisor": None,
             "dc.contributor.referee": "Lima, Carla||Melo, Daniel",
             "dc.subject": "Dados||Migração",
+            "pessoas": {
+                "dc.contributor.author": [
+                    {"source": "ud_biblioteca_publicacao_autor", "id": 1, "given_name": "Ana", "family_name": "Silva"},
+                    {"source": "ud_biblioteca_publicacao_autor", "id": 2, "given_name": "Beto", "family_name": "Souza"},
+                ],
+                "dc.contributor.advisor": [],
+                "dc.contributor.coadvisor": [],
+                "dc.contributor.referee": [
+                    {"source": "ud_biblioteca_publicacao_orientador", "id": 3, "given_name": "Carla", "family_name": "Lima"},
+                    {"source": "ud_biblioteca_publicacao_orientador", "id": 4, "given_name": "Daniel", "family_name": "Melo"},
+                ],
+            },
         }])
 
     def test_generates_clean_deduplicated_and_routed_saf_metadata(self):
@@ -116,6 +128,15 @@ class MetadataPipelineTests(unittest.TestCase):
                 [value for element, qualifier, _, value in values
                  if (element, qualifier) == ("contributor", "referee")],
             )
+            local = ET.parse(item / "metadata_local.xml").getroot()
+            self.assertEqual("local", local.attrib["schema"])
+            self.assertEqual(
+                [("course", "name", "Curso Teste"), ("campus", "name", "Campus Teste")],
+                [(v.attrib["element"], v.attrib["qualifier"], v.text) for v in local],
+            )
+            self.assertFalse(any(e == "description" and q == "degree" for e,q,_,_ in values))
+            self.assertFalse(any(e == "publisher" and q == "department" for e,q,_,_ in values))
+            self.assertTrue((saf / "people.json").exists())
             self.assertEqual("embargo", read_access_policies(saf)[42].access_type)
             self.assertFalse(legacy_embargo_csv.exists())
 

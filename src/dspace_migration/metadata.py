@@ -8,6 +8,7 @@ from pathlib import Path
 import pandas as pd
 import psycopg2
 from dotenv import load_dotenv
+from dspace_migration.people import build_manifest, write_json, MANIFEST_NAME, ACADEMIC_RENAMES
 from dspace_migration.access import determine_access_policy, write_access_policies
 from dspace_migration.organization import (
     load_curso_mapping,
@@ -85,6 +86,20 @@ def process_data(
         df = df.head(limit)
 
     print(f"Total de registros carregados: {df.shape[0]}")
+
+    # Uma extração antiga pode fornecer os aliases anteriores. Normaliza os
+    # nomes sem inferir grau acadêmico nem programa a partir do curso.
+    for old, new in ACADEMIC_RENAMES.items():
+        if old in df.columns:
+            if new in df.columns:
+                raise ValueError(f"Consulta contém simultaneamente {old} e {new}")
+            df = df.rename(columns={old: new})
+    records = df.to_dict(orient='records')
+    people_manifest = build_manifest(records)
+    for field in ('dc.contributor.author', 'dc.contributor.advisor',
+                  'dc.contributor.coadvisor', 'dc.contributor.referee'):
+        df[field] = [row[field] for row in records]
+
 
     # 1. Limpeza de HTML
     print("Limpando tags HTML...")
@@ -227,6 +242,7 @@ def process_data(
         'autorizar_publicacao',
         'curso_nome',
         'dc.date.submitted',
+        'pessoas',
     }
 
     # 7. Geração da Estrutura SAF (hierárquica por polo/coleção)
@@ -260,7 +276,8 @@ def process_data(
         })
 
         os.makedirs(item_dir, exist_ok=True)
-        root = ET.Element('dublin_core', schema='dc')
+        roots = {'dc': ET.Element('dublin_core', schema='dc')}
+        current_schema = 'dc'
 
         invalid_xml_chars = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]')
 
@@ -270,22 +287,21 @@ def process_data(
                     v = v.strip()
                     if v:
                         v_clean = invalid_xml_chars.sub('', v)
-                        dcval = ET.SubElement(root, 'dcvalue', element=element, qualifier=qualifier)
+                        dcval = ET.SubElement(roots[current_schema], 'dcvalue', element=element, qualifier=qualifier)
                         if language:
                             dcval.set('language', language)
                         dcval.text = v_clean
 
         for col_name, val in row_dict.items():
+            if col_name in EXCLUDED_COLUMNS:
+                continue
             if pd.isna(val) or str(val).strip() == "":
                 continue
 
-            # Pular colunas de controle (não geram metadados DC)
-            if col_name in EXCLUDED_COLUMNS:
-                continue
-
-            if col_name.startswith('dc.'):
+            if col_name.startswith(('dc.', 'local.')):
                 parts = col_name.split('.')
-                schema = parts[0]
+                current_schema = parts[0]
+                roots.setdefault(current_schema, ET.Element('dublin_core', schema=current_schema))
                 element = parts[1]
 
                 qualifier = 'none'
@@ -306,12 +322,16 @@ def process_data(
 
                 add_dcvalue(element, qualifier, language, val)
 
-        xml_str = ET.tostring(root, encoding='utf-8')
-        parsed_xml = minidom.parseString(xml_str)
-        pretty_xml = parsed_xml.toprettyxml(indent="  ", encoding="utf-8").decode('utf-8')
+        for schema, root in roots.items():
+            xml_str = ET.tostring(root, encoding='utf-8')
+            pretty_xml = minidom.parseString(xml_str).toprettyxml(indent="  ", encoding="utf-8").decode('utf-8')
+            filename = 'dublin_core.xml' if schema == 'dc' else f'metadata_{schema}.xml'
+            Path(item_dir, filename).write_text(pretty_xml, encoding='utf-8')
+        # Evita carregar um metadata_local.xml obsoleto ao regenerar um item.
+        if 'local' not in roots:
+            Path(item_dir, 'metadata_local.xml').unlink(missing_ok=True)
 
-        with open(os.path.join(item_dir, 'dublin_core.xml'), 'w', encoding='utf-8') as f:
-            f.write(pretty_xml)
+    write_json(Path(saf_bundle_dir) / MANIFEST_NAME, people_manifest)
 
     # Exportar relatório de roteamento
     routing_csv = Path('routing_report.csv')

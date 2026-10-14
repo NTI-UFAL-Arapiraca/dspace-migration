@@ -5,6 +5,8 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DOCKER_ROOT = PROJECT_ROOT / "dspace-docker"
+if not DOCKER_ROOT.exists():
+    DOCKER_ROOT = PROJECT_ROOT.parent / "dspace-bca"
 SUBMISSION_FORMS = DOCKER_ROOT / "backend/config/submission-forms.xml"
 ABSTRACT_LANGUAGE_MIGRATION = (
     DOCKER_ROOT / "backend/sql/normalize_abstract_languages.sql"

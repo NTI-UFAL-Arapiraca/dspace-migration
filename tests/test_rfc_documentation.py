@@ -3,7 +3,10 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-RFC_ROOT = PROJECT_ROOT / "docs/rfc"
+DEPLOYMENT_ROOT = PROJECT_ROOT / "dspace-docker"
+if not DEPLOYMENT_ROOT.exists():
+    DEPLOYMENT_ROOT = PROJECT_ROOT.parent / "dspace-bca"
+RFC_ROOT = DEPLOYMENT_ROOT / "rfc"
 
 
 class RfcDocumentationTests(unittest.TestCase):
@@ -21,6 +24,7 @@ class RfcDocumentationTests(unittest.TestCase):
         "0011-endpoint-oai-pmh.md",
         "0012-seo-sitemaps-robots-ssr.md",
         "0013-banco-geoip-geolite2.md",
+        "0014-pessoas-e-metadados-academicos.md",
     }
 
     def test_every_known_override_has_an_indexed_rfc(self):

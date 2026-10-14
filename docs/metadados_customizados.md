@@ -7,22 +7,23 @@ sem exigir a interface administrativa. O XML versionado é
 
 ## Campos necessários
 
-Estes cinco campos são extensões locais do esquema `dc`, utilizadas pelo
+Estes seis campos são extensões dos esquemas `dc` e `local`, utilizadas pelo
 [`SQL de extração`](../sql/extract_metadata.sql) e pelo gerador SAF:
 
 | Campo | Significado local | Origem e regra |
 | --- | --- | --- |
-| `dc.description.degree` | Curso ou programa | `ud_curso.name`. Guarda o curso, não o grau acadêmico. Também há roteamento por curso, mas a coleção não substitui esse valor descritivo do item. |
-| `dc.publisher.department` | Campus de origem | `ud_campus.name`. Guarda o campus, não necessariamente departamento ou editora. |
+| `local.course.name` | Curso ou programa | `ud_curso.name`. Guarda o curso, não o grau acadêmico. Também há roteamento por curso, mas a coleção não substitui esse valor descritivo do item. |
+| `local.campus.name` | Campus de origem | `ud_campus.name`. Guarda o campus, não necessariamente departamento ou editora. |
 | `dc.contributor.coadvisor` | Coorientador | Relação de coorientadores. Um valor por pessoa, no formato `Sobrenome, Nome`. |
 | `dc.contributor.referee` | Avaliador da banca | Relação de membros da banca. Um valor por pessoa, no formato `Sobrenome, Nome`. |
+| `local.identifier.legacy` | Identidade da pessoa na origem | `odoo:TABELA:ID`; usado por `apply-people` para retomada sem duplicar pessoas. |
 | `dc.description.note` | Observação geral ou nota de acervo | Observações legadas após limpeza e classificação. Notas de restrição vão para `dc.description.provenance`; citações identificadas vão para `dc.identifier.citation`. A classificação é heurística e pode exigir revisão. |
 
-Os nomes são convenções locais preservadas para manter compatibilidade com os
-pacotes SAF e os itens já importados. Eles não constituem uma recomendação
-universal de catalogação. Mudar um nome exige revisar o SQL, os pacotes SAF,
-os valores já armazenados e as configurações de exibição, submissão, busca e
-exportação que o utilizem.
+Curso usa `local.course.name` e campus usa `local.campus.name`; os aliases
+antigos eram `dc.description.degree` e `dc.publisher.department`.
+Novos SAFs escrevem os campos em `metadata_local.xml`. `apply-people`
+converte os valores antigos nos itens já importados, sem excluir definições
+do registro. Veja [Pessoas e vínculos](5_pessoas_e_vinculos.md).
 
 `dc.contributor.advisor` já existe no registro padrão do DSpace 10.1 e não
 precisa ser recriado. Títulos, autores, resumos, assuntos, datas e outros
@@ -82,8 +83,8 @@ campos nem alterar metadados dos itens. Não é necessário reimportar o acervo.
 As notas de escopo do XML são aplicadas apenas aos campos novos. Editar uma
 nota no XML e executar novamente não atualiza a definição existente; revise
 essas notas pela administração ou pela API administrativa quando necessário.
-O XML não contém uma declaração `dc-schema`, para preservar o namespace do
-esquema já instalado.
+O XML não declara `dc-schema`, preservando os namespaces `dc` e `local`
+já instalados no DSpace 10.1.
 
 O antigo script também tentava cadastrar `dc.publisher.place` e
 `dc.type.degree`. Esses campos não são preenchidos pela migração atual e
@@ -100,7 +101,7 @@ cadastro e não é executada por este script.
 ## Verificação e limites
 
 Após executar o script, confira no registro de metadados da administração
-que os cinco campos estão presentes. A interface é uma opção de inspeção,
+que os seis campos estão presentes. A interface é uma opção de inspeção,
 não uma etapa obrigatória para o cadastro. Registre a saída do CLI junto à
 execução da migração e teste a importação de um pacote SAF representativo.
 

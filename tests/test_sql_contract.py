@@ -16,6 +16,7 @@ class MetadataSqlContractTests(unittest.TestCase):
             "data_limite_embargo",
             "autorizar_publicacao",
             "curso_nome",
+            "pessoas",
         ):
             with self.subTest(alias=alias):
                 self.assertIn(f'AS "{alias}"', query)
@@ -30,6 +31,15 @@ class MetadataSqlContractTests(unittest.TestCase):
         self.assertIn("FROM publicacao_membro_banca_rel", query)
         self.assertIn("pmb.ud_biblioteca_publicacao_id = p.id", query)
         self.assertIn('AS "dc.contributor.referee"', query)
+
+    def test_academic_fields_have_explicit_names(self):
+        query = (PROJECT_ROOT / "sql/extract_metadata.sql").read_text()
+        self.assertIn('c.name AS "local.course.name"', query)
+        self.assertIn('camp.name AS "local.campus.name"', query)
+        self.assertNotIn('AS "dc.description.degree"', query)
+        self.assertNotIn('AS "dc.publisher.department"', query)
+        self.assertIn("'source', 'ud_biblioteca_publicacao_autor'", query)
+        self.assertIn("'source', 'ud_biblioteca_publicacao_orientador'", query)
 
     def test_query_maps_defense_date_only_to_date_issued(self):
         query = (PROJECT_ROOT / "sql" / "extract_metadata.sql").read_text(

@@ -205,7 +205,7 @@ docker compose -p d10 -f cli.yml run --rm dspace-cli create-administrator -e tes
 
 ## 7. Registrar Campos de Metadados Customizados
 
-Cadastre os cinco campos locais usados pela migração com o XML versionado em
+Cadastre os seis campos locais usados pela migração com o XML versionado em
 `config/registries/migration-metadata.xml`. O script usa o CLI oficial
 `registry-loader -m`, sem SQL direto e sem exigir cadastro manual na interface.
 `dc.contributor.advisor` já é padrão; os campos sem uso `dc.publisher.place` e

@@ -167,3 +167,13 @@ docker compose -p d10 -f cli.yml run --rm dspace-cli filter-media
 * **`-v`** (verbose): Exibe em tempo real os detalhes de cada arquivo sendo processado.
 * **`-f`** (force): Força o reprocessamento de arquivos, mesmo aqueles que já possuem miniaturas previamente geradas.
 * **`-p "ImageMagick PDF Thumbnail"`**: Processa especificamente as miniaturas de arquivos PDF utilizando ImageMagick (se configurado no DSpace).
+
+
+Após a importação SAF, execute `uv run apply-people --dry-run` e
+`uv run apply-people` para criar as pessoas bibliográficas e vincular os
+trabalhos. A etapa também converte os nomes antigos de curso e campus nos
+itens existentes. O pipeline completo executa a aplicação automaticamente,
+antes de estatísticas e índices; `--skip-people` permite adiá-la. Consulte
+[Pessoas e vínculos](5_pessoas_e_vinculos.md) para preparar o backend, a
+coleção Person e `DSPACE_PERSON_COLLECTION_UUID`. Não repita a importação SAF
+para retomar o enriquecimento.
