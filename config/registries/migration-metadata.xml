@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Extensões usadas pelo SAF. Os esquemas dc e local já existem no DSpace 10.1.
+<!-- Extensões usadas pelo SAF e pelos perfis. Os esquemas dc, local e person já existem no DSpace 10.1.
      Não declarar dc-schema: preserva os namespaces instalados.
      Ver docs/referencia/metadados-customizados.md antes de mudar nomes ou significados. -->
 <dspace-dc-types>
@@ -38,5 +38,17 @@
     <element>identifier</element>
     <qualifier>legacy</qualifier>
     <scope_note>Identificador da pessoa na origem no formato odoo:TABELA:ID. Usado para retomada e conciliação; não é uma conta de acesso.</scope_note>
+  </dc-type>
+  <dc-type>
+    <schema>person</schema>
+    <element>identifier</element>
+    <qualifier>lattes</qualifier>
+    <scope_note>URL canônica HTTPS do currículo Lattes da pessoa, no domínio lattes.cnpq.br e com identificador de 16 dígitos.</scope_note>
+  </dc-type>
+  <dc-type>
+    <schema>local</schema>
+    <element>person</element>
+    <qualifier>degree</qualifier>
+    <scope_note>Titulação acadêmica do cadastro da pessoa na origem. Preserva o rótulo original; não representa cargo nem comprova titulação na data de defesa de um trabalho.</scope_note>
   </dc-type>
 </dspace-dc-types>

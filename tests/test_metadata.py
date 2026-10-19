@@ -1,4 +1,5 @@
 import os
+import json
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
@@ -39,13 +40,13 @@ class MetadataPipelineTests(unittest.TestCase):
             "dc.subject": "Dados||Migração",
             "pessoas": {
                 "dc.contributor.author": [
-                    {"source": "ud_biblioteca_publicacao_autor", "id": 1, "given_name": "Ana", "family_name": "Silva"},
+                    {"source": "ud_biblioteca_publicacao_autor", "id": 1, "given_name": "Ana", "family_name": "Silva", "email": "ana@example.org"},
                     {"source": "ud_biblioteca_publicacao_autor", "id": 2, "given_name": "Beto", "family_name": "Souza"},
                 ],
                 "dc.contributor.advisor": [],
                 "dc.contributor.coadvisor": [],
                 "dc.contributor.referee": [
-                    {"source": "ud_biblioteca_publicacao_orientador", "id": 3, "given_name": "Carla", "family_name": "Lima"},
+                    {"source": "ud_biblioteca_publicacao_orientador", "id": 3, "given_name": "Carla", "family_name": "Lima", "degree": "Dr.ª", "lattes": "1234567890123456"},
                     {"source": "ud_biblioteca_publicacao_orientador", "id": 4, "given_name": "Daniel", "family_name": "Melo"},
                 ],
             },
@@ -137,6 +138,11 @@ class MetadataPipelineTests(unittest.TestCase):
             self.assertFalse(any(e == "description" and q == "degree" for e,q,_,_ in values))
             self.assertFalse(any(e == "publisher" and q == "department" for e,q,_,_ in values))
             self.assertTrue((saf / "people.json").exists())
+            people = json.loads((saf / "people.json").read_text())["people"]
+            self.assertEqual("ana@example.org", people["odoo:ud_biblioteca_publicacao_autor:1"]["email"])
+            self.assertEqual("Dr.ª", people["odoo:ud_biblioteca_publicacao_orientador:3"]["degree"])
+            self.assertEqual("https://lattes.cnpq.br/1234567890123456", people["odoo:ud_biblioteca_publicacao_orientador:3"]["lattes"])
+            self.assertFalse(any("example.org" in str(v.text) or "lattes.cnpq.br" in str(v.text) for v in xml_root))
             self.assertEqual("embargo", read_access_policies(saf)[42].access_type)
             self.assertFalse(legacy_embargo_csv.exists())
 

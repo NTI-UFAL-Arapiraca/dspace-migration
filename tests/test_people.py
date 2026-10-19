@@ -1,6 +1,7 @@
 import copy
 import fcntl
 import json
+import json
 import os
 from pathlib import Path
 import tempfile
@@ -10,6 +11,7 @@ from unittest.mock import patch
 
 from dspace_migration.people import (
     PERSON_FIELDS, SOURCE_FIELD, apply_people, build_manifest, write_json,
+    normalize_email, normalize_lattes, read_manifest, _refresh_profiles,
 )
 
 
@@ -81,16 +83,58 @@ class FakeClient:
     def api_patch(self, url, operation, path, value, params=None):
         assert params == {"projection": "allLanguages"}
         item = self.items[url.rsplit("/", 1)[-1]]
-        field = path.removeprefix("/metadata/")
-        self.writes.append((operation, field))
+        parts = path.removeprefix("/metadata/").split("/")
+        field = parts[0]
+        index = parts[1] if len(parts) > 1 else None
+        self.writes.append((operation, path))
+        values = item["metadata"].get(field, [])
+        # DSpace 10.1 consumes only the first array element, even at field level.
+        parsed = copy.deepcopy(value[0] if isinstance(value, list) else value)
         if operation == "remove":
-            del item["metadata"][field]
+            if index is None:
+                del item["metadata"][field]
+            else:
+                del values[int(index)]
+        elif operation == "add":
+            values.insert(len(values) if index == "-" else 0, parsed)
+            item["metadata"][field] = values
         else:
-            item["metadata"][field] = copy.deepcopy(value)
+            assert operation == "replace"
+            if index is None:
+                item["metadata"][field] = [parsed]
+            else:
+                values[int(index)] = parsed
         return self.response(item)
 
 
 class ManifestTests(unittest.TestCase):
+    def test_extracts_profile_without_changing_names_or_participations(self):
+        row = source_row()
+        row["pessoas"]["dc.contributor.author"][0]["email"] = " ana@EXAMPLE.ORG "
+        profile = {"email": "ana@example.org", "lattes": "http://lattes.cnpq.br/1234567890123456/", "degree": "Dr.ª"}
+        for field in ("dc.contributor.advisor", "dc.contributor.referee"):
+            row["pessoas"][field][0].update(profile)
+        manifest = build_manifest([row])
+        author = manifest["people"]["odoo:ud_biblioteca_publicacao_autor:7"]
+        advisor = manifest["people"]["odoo:ud_biblioteca_publicacao_orientador:7"]
+        self.assertEqual("ana@example.org", author["email"])
+        self.assertEqual("https://lattes.cnpq.br/1234567890123456", advisor["lattes"])
+        self.assertEqual("Dr.ª", advisor["degree"])
+        self.assertEqual("Silva, Ana", row["dc.contributor.author"])
+
+    def test_invalid_contacts_are_reported_without_exposing_values(self):
+        row = source_row()
+        row["pessoas"]["dc.contributor.author"][0].update(email="invalid-contact", lattes="javascript:alert(1)")
+        manifest = build_manifest([row])
+        self.assertEqual(2, len(manifest["profile_issues"]))
+        self.assertNotIn("invalid-contact", json.dumps(manifest))
+        self.assertNotIn("javascript:", json.dumps(manifest))
+        self.assertIsNone(normalize_email("name@example.org; other@example.org"))
+        self.assertIsNone(normalize_email("name@example.org:8080"))
+        self.assertIsNone(normalize_lattes("https://lattes.cnpq.br.evil.test/1234567890123456"))
+        self.assertIsNone(normalize_lattes("https://user@lattes.cnpq.br/1234567890123456"))
+        self.assertEqual("https://lattes.cnpq.br/1234567890123456", normalize_lattes("1234567890123456"))
+        self.assertEqual("https://lattes.cnpq.br/1234567890123456", normalize_lattes("lattes.cnpq.br/1234567890123456"))
     def test_source_identity_reuses_advisor_for_board_but_keeps_author_separate(self):
         rows = [source_row(), source_row(43)]
         manifest = build_manifest(rows)
@@ -138,6 +182,71 @@ class PeopleApplicationTests(unittest.TestCase):
     def run_application(self, **kwargs):
         return apply_people(self.root, COLLECTION, **kwargs)
 
+    def add_profile(self):
+        manifest = read_manifest(self.root)
+        manifest["people"]["odoo:ud_biblioteca_publicacao_orientador:7"].update({
+            "email": "ana@example.org", "degree": "Dr.ª", "lattes": "https://lattes.cnpq.br/1234567890123456",
+        })
+        write_json(self.root / "people.json", manifest)
+
+    def test_creates_profiles_and_enriches_existing_people_without_duplicate_fields(self):
+        self.run_application()
+        self.add_profile()
+        before = copy.deepcopy(self.client.items[PUBLICATION])
+        result = self.run_application()
+        self.assertEqual(0, result.created)
+        self.assertEqual(1, result.people_updated)
+        self.assertEqual(before, self.client.items[PUBLICATION])
+        person = next(x for x in self.client.items.values() if x["metadata"].get("person.email"))
+        self.assertEqual("Dr.ª", person["metadata"]["local.person.degree"][0]["value"])
+        writes = len(self.client.writes)
+        self.assertEqual(0, self.run_application().people_updated)
+        self.assertEqual(writes, len(self.client.writes))
+
+    def test_new_person_receives_full_profile_on_creation(self):
+        self.add_profile()
+        result = self.run_application()
+        self.assertEqual(2, result.created)
+        people = [x for x in self.client.items.values() if x["metadata"].get("person.email")]
+        self.assertEqual(1, len(people))
+        self.assertEqual("https://lattes.cnpq.br/1234567890123456", people[0]["metadata"]["person.identifier.lattes"][0]["value"])
+
+    def test_profile_conflict_fails_before_mutating_any_person_or_work(self):
+        self.run_application()
+        self.add_profile()
+        # Author and advisor share their name; identity stays table + ID.
+        for item in self.client.items.values():
+            if any(v["value"] == "odoo:ud_biblioteca_publicacao_orientador:7" for v in item["metadata"].get(SOURCE_FIELD, [])):
+                item["metadata"]["person.email"] = [{"value": "curated@example.org"}]
+        writes = len(self.client.writes)
+        with self.assertRaisesRegex(ValueError, "Perfil existente diverge"):
+            self.run_application()
+        self.assertEqual(writes, len(self.client.writes))
+
+    def test_refresh_dry_run_does_not_write_manifest_or_profiles(self):
+        self.run_application()
+        self.add_profile()
+        refreshed = read_manifest(self.root)
+        old_manifest = (self.root / "people.json").read_bytes()
+        writes = len(self.client.writes)
+        with patch("dspace_migration.people._refresh_profiles", return_value=refreshed):
+            self.assertEqual(1, self.run_application(refresh_profiles=True, dry_run=True).people_updated)
+        self.assertEqual(old_manifest, (self.root / "people.json").read_bytes())
+        self.assertEqual(writes, len(self.client.writes))
+
+    def test_refresh_source_is_readonly_and_rejects_changed_participations(self):
+        connection = unittest.mock.MagicMock()
+        cursor = connection.__enter__.return_value.cursor.return_value.__enter__.return_value
+        cursor.fetchall.return_value = [source_row()]
+        with patch("dspace_migration.people.psycopg2.connect", return_value=connection) as connect:
+            refreshed = _refresh_profiles(self.root)
+            self.assertEqual(read_manifest(self.root), refreshed)
+            self.assertEqual("-c default_transaction_read_only=on", connect.call_args.kwargs["options"])
+            self.assertEqual(([42],), cursor.execute.call_args.args[1])
+            cursor.fetchall.return_value = [source_row(43)]
+            with self.assertRaisesRegex(ValueError, "Participações mudaram"):
+                _refresh_profiles(self.root)
+
     def test_links_roles_preserves_translations_and_is_idempotent(self):
         before = copy.deepcopy(self.client.items[PUBLICATION]["metadata"])
         first = self.run_application()
@@ -172,11 +281,49 @@ class PeopleApplicationTests(unittest.TestCase):
         self.assertEqual(1, result.reused)
         self.assertEqual(PERSON, self.client.items[PUBLICATION]["metadata"]["dc.contributor.author"][0]["authority"])
 
+    def test_updates_both_referees_in_existing_order_without_duplicates(self):
+        row = source_row()
+        second = {"source": "ud_biblioteca_publicacao_orientador", "id": 8,
+                  "given_name": "Bruno", "family_name": "Costa"}
+        row["pessoas"]["dc.contributor.referee"].append(second)
+        write_json(self.root / "people.json", build_manifest([row]))
+        metadata = self.client.items[PUBLICATION]["metadata"]
+        metadata["dc.contributor.referee"].insert(0, {
+            "value": "Costa, Bruno", "language": "pt", "securityLevel": 1,
+        })
+        before = copy.deepcopy(metadata["dc.contributor.referee"])
+        self.run_application()
+        values = metadata["dc.contributor.referee"]
+        self.assertEqual([v["value"] for v in before], [v["value"] for v in values])
+        self.assertEqual(2, len({v["authority"] for v in values}))
+        self.assertTrue(all(v["confidence"] == 600 for v in values))
+        self.assertEqual("pt", values[0]["language"])
+        self.assertEqual(1, values[0]["securityLevel"])
+        self.assertIn(("replace", "/metadata/dc.contributor.referee/1"), self.client.writes)
+        writes = len(self.client.writes)
+        self.assertEqual(1, self.run_application().items_unchanged)
+        self.assertEqual(writes, len(self.client.writes))
+
+    def test_resumes_after_first_participation_was_saved(self):
+        original = self.client.api_patch
+
+        def fail_author(**kwargs):
+            if kwargs["path"] == "/metadata/dc.contributor.author/0":
+                raise RuntimeError("interrupção")
+            return original(**kwargs)
+
+        with patch.object(self.client, "api_patch", side_effect=fail_author):
+            with self.assertRaisesRegex(RuntimeError, "interrupção"):
+                self.run_application()
+        self.assertEqual(2, self.run_application().reused)
+        self.assertEqual(1, self.run_application().items_unchanged)
+
     def test_dry_run_does_not_create_accounts_people_links_or_checkpoint(self):
         result = self.run_application(dry_run=True)
         self.assertEqual(2, result.created)
         self.assertEqual([], self.client.writes)
         self.assertFalse((self.root / "people-map.json").exists())
+        self.assertFalse((self.root / "people.lock").exists())
 
     def test_incompatible_model_and_missing_handles_fail_before_mutation(self):
         self.client.mode = "true"
@@ -232,6 +379,33 @@ class PeopleApplicationTests(unittest.TestCase):
         self.assertEqual(0, result.created)
         self.assertEqual(2, result.reused)
         self.assertNotIn("dc.description.degree", metadata)
+
+    def test_resumes_multivalue_rename_after_only_first_value_was_copied(self):
+        metadata = self.client.items[PUBLICATION]["metadata"]
+        metadata["dc.description.degree"].append({
+            "value": "Course", "language": "en", "authority": PERSON,
+            "confidence": 600, "securityLevel": 1,
+        })
+        before = copy.deepcopy(metadata["dc.description.degree"])
+        original = self.client.api_patch
+
+        def fail_second_copy(**kwargs):
+            if kwargs["path"] == "/metadata/local.course.name/-":
+                raise RuntimeError("interrupção")
+            return original(**kwargs)
+
+        with patch.object(self.client, "api_patch", side_effect=fail_second_copy):
+            with self.assertRaisesRegex(RuntimeError, "interrupção"):
+                self.run_application()
+        self.assertEqual(before, metadata["dc.description.degree"])
+        self.assertEqual(1, len(metadata["local.course.name"]))
+        self.assertEqual(2, self.run_application().reused)
+        self.assertNotIn("dc.description.degree", metadata)
+        self.assertEqual(2, len(metadata["local.course.name"]))
+        for old, new in zip(before, metadata["local.course.name"]):
+            for key, value in old.items():
+                self.assertEqual(value, new[key])
+        self.assertEqual(1, self.run_application().items_unchanged)
 
     def test_parallel_writer_on_same_bundle_is_rejected(self):
         with (self.root / "people.lock").open("a") as lock:

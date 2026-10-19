@@ -135,12 +135,16 @@ def run_apply_people():
     parser = argparse.ArgumentParser(description="Migra pessoas e vínculos bibliográficos, sem criar contas.")
     parser.add_argument("--saf-bundle-dir", default=None)
     parser.add_argument("--collection-uuid", default=None, help="Coleção Person; padrão: DSPACE_PERSON_COLLECTION_UUID")
+    parser.add_argument("--refresh-profiles", action="store_true", help="Atualiza o manifesto de perfis a partir da origem, preservando SAF e participações")
     parser.add_argument("--dry-run", action="store_true", help="Inspeciona sem alterar o DSpace nem mapas locais")
     args, _ = parser.parse_known_args()
     try:
-        result = apply_people(args.saf_bundle_dir, args.collection_uuid, dry_run=args.dry_run)
+        result = apply_people(args.saf_bundle_dir, args.collection_uuid, dry_run=args.dry_run,
+                              refresh_profiles=args.refresh_profiles)
         print(f"Pessoas: {result.created} novas, {result.reused} reutilizadas; "
-              f"trabalhos: {result.items_updated} atualizados, {result.items_unchanged} sem alterações.")
+              f"perfis existentes enriquecidos: {result.people_updated}; "
+              f"trabalhos: {result.items_updated} atualizados, {result.items_unchanged} sem alterações; "
+              f"campos de perfil inválidos ignorados: {result.profile_issues}.")
     except Exception as exc:
         print(f"Erro ao aplicar pessoas: {exc}", file=sys.stderr)
         sys.exit(1)
@@ -408,7 +412,9 @@ def migrate_all():
         try:
             result = apply_people()
             print(f"  Pessoas: {result.created} novas, {result.reused} reutilizadas; "
-                  f"{result.items_updated} trabalhos atualizados.")
+                  f"{result.people_updated} perfis existentes enriquecidos; "
+                  f"{result.items_updated} trabalhos atualizados; "
+                  f"{result.profile_issues} campos de perfil inválidos ignorados.")
         except Exception as exc:
             print(f"Erro ao aplicar pessoas: {exc}", file=sys.stderr)
             sys.exit(1)

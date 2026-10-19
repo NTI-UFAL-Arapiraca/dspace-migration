@@ -25,9 +25,10 @@ class MetadataRegistryTests(unittest.TestCase):
             "local.course.name", "local.campus.name", "local.identifier.legacy",
             "dc.contributor.coadvisor", "dc.contributor.referee",
             "dc.description.note",
+            "person.identifier.lattes", "local.person.degree",
         }, set(fields))
         sql = (PROJECT_ROOT / "sql/extract_metadata.sql").read_text()
-        for field in set(fields) - {"local.identifier.legacy"}:
+        for field in set(fields) - {"local.identifier.legacy", "person.identifier.lattes", "local.person.degree"}:
             self.assertIn(f'AS "{field}"', sql)
         for field in root.findall("dc-type"):
             self.assertTrue(field.findtext("scope_note", "").strip())

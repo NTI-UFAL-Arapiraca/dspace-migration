@@ -43,7 +43,8 @@ O comando primeiro valida os trabalhos do manifesto contra os mapfiles e
 os valores existentes na API. Em seguida, recupera pessoas pelo
 `local.identifier.legacy` usando a listagem administrativa baseada no banco,
 sem depender da atualização imediata do Solr. Pessoas novas recebem nome,
-tipo e identificador de origem; nenhuma conta, senha, e-mail ou data de
+tipo e identificador de origem. E-mail, currículo Lattes e titulação são
+incluídos quando disponíveis e válidos. Nenhuma conta, senha ou data de
 nascimento é criada.
 [Criação administrativa de itens](https://raw.githubusercontent.com/DSpace/RestContract/main/items.md).
 
@@ -54,8 +55,50 @@ segunda execução reutiliza pessoas e não repete vínculos já aceitos.
 A simulação não cria pessoas, vínculos, mapas nem arquivo de lock; a
 contagem de pessoas novas significa “seriam criadas”.
 
+## Conteúdo dos perfis e atualização de lotes
+
+O manifesto versão 1 aceita os campos opcionais `email`, `lattes` e `degree`
+em cada pessoa; manifestos antigos continuam válidos. E-mail vem de `contato`
+no cadastro da própria pessoa. Lattes e titulação vêm da tabela de
+orientadores, também usada para coorientação e banca. O texto da titulação
+é preservado em `local.person.degree`; a interface traduz abreviações como
+Dr., Dr.ª, Me., Ma. e Esp. para descrições por extenso.
+
+E-mails são limpos e têm o domínio normalizado. Lattes aceita URL do domínio
+`lattes.cnpq.br` ou identificador de 16 dígitos e gera URL HTTPS canônica em
+`person.identifier.lattes`. Formatos inválidos são omitidos e contabilizados
+em `profile_issues`, sem copiar o conteúdo inválido para mensagens. O campo
+de e-mail é `person.email`. A preparação acadêmica registra os campos novos.
+
+`apply-people` também enriquece Person existentes. Preserva campos vazios na
+origem e valores adicionais da curadoria; um campo já preenchido com valor
+divergente interrompe a pré-validação, antes das escritas.
+
+Para um SAF já importado, preserve pacotes, mapas e checkpoint e execute:
+
+```bash
+uv run apply-people --refresh-profiles --dry-run
+uv run apply-people --refresh-profiles
+```
+
+A opção consulta a origem em transação somente de leitura, reextrai apenas
+as publicações do manifesto e exige as mesmas identidades, nomes e
+participações. Atualiza somente `people.json` e os perfis/vínculos previstos;
+não regenera o SAF. Sem a opção, o comando usa o manifesto existente e não
+acessa o banco de origem. A simulação não grava o manifesto atualizado.
+
+Resumo das participações, temas, cursos e campus no perfil são derivados
+do Discovery e dos metadados dos trabalhos. Não são copiados para a Person.
+O total de trabalhos usa OR entre os quatro papéis, evitando dupla contagem
+quando a mesma pessoa participa do mesmo trabalho em mais de um papel.
+
 O enriquecimento preserva a ordem dos valores existentes, seus idiomas e
-os demais metadados. Divergências de nomes, autoridades conflitantes,
+os demais metadados. Cada participação é atualizada com `replace` em
+`/metadata/CAMPO/ÍNDICE`, enviando um objeto completo e verificando o campo
+retornado. No DSpace 10.1, `add` insere um valor sem substituir o anterior,
+e os PATCHes com arrays utilizam somente o primeiro elemento; por isso não
+se envia a lista inteira de participações para o campo.
+Divergências de nomes, autoridades conflitantes,
 identificadores duplicados, homônimos ambíguos no mesmo campo ou trabalhos
 sem handle interrompem a execução para revisão. Um lote já aplicado pode
 ser retomado; não há transação única envolvendo todo o acervo.
@@ -75,6 +118,8 @@ Em trabalhos anteriormente importados, `apply-people` também copia
 `dc.publisher.department` para `local.campus.name`, preservando idiomas e
 autoridades. Confirma a gravação antes de remover o campo antigo. Se ambos
 existirem com conteúdos diferentes, a operação para, sem escolher um deles.
+Uma cópia interrompida pode ser retomada quando o destino contém um prefixo
+idêntico dos valores da origem; os demais valores são copiados individualmente.
 As definições antigas no registro não são excluídas, e UUIDs, handles,
 arquivos e políticas de acesso dos trabalhos são preservados.
 [Operações oficiais de metadados por PATCH](https://raw.githubusercontent.com/DSpace/RestContract/main/metadata-patch.md).

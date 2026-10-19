@@ -30,7 +30,8 @@ SELECT
         'dc.contributor.author', COALESCE((
             SELECT jsonb_agg(jsonb_build_object(
                 'source', 'ud_biblioteca_publicacao_autor', 'id', aut.id,
-                'given_name', aut.name, 'family_name', aut.ultimo_nome
+                'given_name', aut.name, 'family_name', aut.ultimo_nome,
+                'email', aut.contato
             ) ORDER BY aut.ultimo_nome, aut.name, aut.id)
             FROM ud_biblioteca_publicacao_autores pa
             JOIN ud_biblioteca_publicacao_autor aut ON aut.id = pa.autor_id
@@ -39,7 +40,9 @@ SELECT
         'dc.contributor.advisor', COALESCE((
             SELECT jsonb_agg(jsonb_build_object(
                 'source', 'ud_biblioteca_publicacao_orientador', 'id', ori.id,
-                'given_name', ori.name, 'family_name', ori.ultimo_nome
+                'given_name', ori.name, 'family_name', ori.ultimo_nome,
+                'email', ori.contato, 'lattes', ori.lattes,
+                'degree', (SELECT tit.name FROM ud_biblioteca_orientador_titulacao tit WHERE tit.id = ori.titulacao_id)
             ) ORDER BY ori.ultimo_nome, ori.name, ori.id)
             FROM publicacao_orientador_rel por
             JOIN ud_biblioteca_publicacao_orientador ori ON ori.id = por.ud_biblioteca_publicacao_orientador_id
@@ -48,7 +51,9 @@ SELECT
         'dc.contributor.coadvisor', COALESCE((
             SELECT jsonb_agg(jsonb_build_object(
                 'source', 'ud_biblioteca_publicacao_orientador', 'id', coori.id,
-                'given_name', coori.name, 'family_name', coori.ultimo_nome
+                'given_name', coori.name, 'family_name', coori.ultimo_nome,
+                'email', coori.contato, 'lattes', coori.lattes,
+                'degree', (SELECT tit.name FROM ud_biblioteca_orientador_titulacao tit WHERE tit.id = coori.titulacao_id)
             ) ORDER BY coori.ultimo_nome, coori.name, coori.id)
             FROM publicacao_coorientador_rel pco
             JOIN ud_biblioteca_publicacao_orientador coori ON coori.id = pco.ud_biblioteca_publicacao_orientador_id
@@ -57,7 +62,9 @@ SELECT
         'dc.contributor.referee', COALESCE((
             SELECT jsonb_agg(jsonb_build_object(
                 'source', 'ud_biblioteca_publicacao_orientador', 'id', banca.id,
-                'given_name', banca.name, 'family_name', banca.ultimo_nome
+                'given_name', banca.name, 'family_name', banca.ultimo_nome,
+                'email', banca.contato, 'lattes', banca.lattes,
+                'degree', (SELECT tit.name FROM ud_biblioteca_orientador_titulacao tit WHERE tit.id = banca.titulacao_id)
             ) ORDER BY banca.ultimo_nome, banca.name, banca.id)
             FROM publicacao_membro_banca_rel pmb
             JOIN ud_biblioteca_publicacao_orientador banca ON banca.id = pmb.ud_biblioteca_publicacao_orientador_id

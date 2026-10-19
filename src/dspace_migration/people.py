@@ -10,8 +10,11 @@ import os
 from pathlib import Path
 import re
 import tempfile
+from urllib.parse import urlsplit
 from uuid import UUID
 
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 from dspace_rest_client.client import DSpaceClient
 
@@ -32,6 +35,11 @@ ACADEMIC_RENAMES = {
 }
 SOURCE_FIELD = "local.identifier.legacy"
 MANIFEST_NAME = "people.json"
+PROFILE_FIELDS = {
+    "email": "person.email",
+    "lattes": "person.identifier.lattes",
+    "degree": "local.person.degree",
+}
 
 
 def write_json(path: Path, data: dict) -> None:
@@ -57,9 +65,53 @@ def _name(value) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", str(value))).strip()
 
 
+def normalize_email(value):
+    value = _name(value)
+    if re.fullmatch(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,63}", value):
+        local, domain = value.rsplit("@", 1)
+        return f"{local}@{domain.lower()}"
+    return None
+
+
+def normalize_lattes(value):
+    value = _name(value)
+    if re.fullmatch(r"[0-9]{16}", value):
+        return f"https://lattes.cnpq.br/{value}"
+    if value.lower().startswith("lattes.cnpq.br/"):
+        value = "https://" + value
+    try:
+        url = urlsplit(value)
+        if (url.scheme in ("http", "https") and url.netloc.lower() == "lattes.cnpq.br"
+                and re.fullmatch(r"/[0-9]{16}/?", url.path)):
+            return f"https://lattes.cnpq.br/{url.path.strip('/')}"
+    except ValueError:
+        pass
+    return None
+
+
+def _profile(record, key, issues):
+    profile = {}
+    for field, normalize in (("email", normalize_email), ("lattes", normalize_lattes),
+                             ("degree", lambda value: _name(value) or None)):
+        if field not in record:
+            continue
+        raw = record[field]
+        profile[field] = normalize(raw)
+        if _name(raw) and not profile[field]:
+            issue = {"person": key, "field": field, "reason": "invalid_format"}
+            if issue not in issues:
+                issues.append(issue)
+    return profile
+
+
+def _profile_metadata(person):
+    return {field: [{"value": person[key]}] for key, field in PROFILE_FIELDS.items() if person.get(key)}
+
+
 def build_manifest(rows: list[dict]) -> dict:
     """Preserva tabela+ID e papel; homônimos não são conciliados pelo nome."""
     manifest = {"version": 1, "people": {}, "items": {}}
+    issues = []
     for row in rows:
         item_id = str(int(row["id_origem"]))
         if item_id in manifest["items"]:
@@ -87,7 +139,8 @@ def build_manifest(rows: list[dict]) -> dict:
                 label = ", ".join(part for part in (family, given) if part)
                 if not label or "||" in label:
                     raise ValueError(f"{key}: nome vazio ou contém separador reservado")
-                person = {"given_name": given, "family_name": family, "name": label}
+                person = {"given_name": given, "family_name": family, "name": label,
+                          **_profile(record, key, issues)}
                 previous = manifest["people"].get(key)
                 if previous is not None and previous != person:
                     raise ValueError(f"Cadastro conflitante para {key}")
@@ -100,6 +153,9 @@ def build_manifest(rows: list[dict]) -> dict:
             # entre duas agregações SQL independentes.
             row[field] = "||".join(manifest["people"][key]["name"] for key in keys) or None
         manifest["items"][item_id] = participations
+    if issues:
+        # Não replica endereços ou URLs inválidos em mensagens/relatórios.
+        manifest["profile_issues"] = issues
     return manifest
 
 
@@ -125,9 +181,34 @@ def read_manifest(saf_dir: Path) -> dict:
                     part for part in (person.get("family_name"), person.get("given_name")) if part
                 ):
                     raise ValueError(f"Nome inconsistente: {key}")
+                issues = []
+                if _profile(person, key, issues) != {k: person[k] for k in PROFILE_FIELDS if k in person} or issues:
+                    raise ValueError(f"Perfil não normalizado: {key}")
     if referenced != set(data["people"]):
         raise ValueError("Manifesto contém pessoas sem participação no lote")
     return data
+
+
+def _refresh_profiles(saf_dir):
+    """Reextrai apenas o manifesto do lote, em transação de origem somente de leitura."""
+    previous = read_manifest(saf_dir)
+    sql = (Path(__file__).resolve().parents[2] / "sql/extract_metadata.sql").read_text().rstrip().rstrip(";")
+    with psycopg2.connect(
+        host=os.getenv("DB_HOST", "localhost"), port=os.getenv("DB_PORT", "5440"),
+        dbname=os.getenv("DB_NAME", "biblioteca"), user=os.getenv("DB_USER", "postgres"),
+        password=os.getenv("DB_PASSWORD", "postgres"),
+        options="-c default_transaction_read_only=on",
+    ) as connection:
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(f'SELECT source.* FROM ({sql}) AS source WHERE source."id_origem" = ANY(%s)',
+                           (list(map(int, previous["items"])),))
+            updated = build_manifest(cursor.fetchall())
+    if updated["items"] != previous["items"] or set(updated["people"]) != set(previous["people"]):
+        raise ValueError("Participações mudaram na origem; revise o lote antes de atualizar perfis")
+    for key, person in previous["people"].items():
+        if any(person[field] != updated["people"][key][field] for field in ("name", "given_name", "family_name")):
+            raise ValueError(f"Nome mudou na origem: {key}; revisão necessária")
+    return updated
 
 
 def _json(response, expected=(200,)) -> dict:
@@ -155,7 +236,8 @@ def _canonical(values):
 
 def _validate_fields(metadata, fields, people, person_ids=None):
     for old, new in ACADEMIC_RENAMES.items():
-        if old in metadata and new in metadata and _canonical(metadata[old]) != _canonical(metadata[new]):
+        # Uma cópia interrompida pode ter publicado apenas o prefixo do campo.
+        if old in metadata and new in metadata and _canonical(metadata[new]) != _canonical(metadata[old])[:len(metadata[new])]:
             raise ValueError(f"Valores conflitantes em {old} e {new}")
     for field, keys in fields.items():
         current = metadata.get(field, [])
@@ -186,24 +268,26 @@ class PeopleApplicationResult:
     reused: int = 0
     items_updated: int = 0
     items_unchanged: int = 0
+    people_updated: int = 0
+    profile_issues: int = 0
 
 
-def apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False):
+def apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False, refresh_profiles=False):
     """Serializa as escritas de um SAF; simulação não escreve nem o lock."""
     load_dotenv()
     saf_dir = Path(saf_bundle_dir or os.getenv("SAF_BUNDLE_DIR", "saf_bundle"))
     if dry_run:
-        return _apply_people(saf_dir, collection_uuid, dry_run=True)
+        return _apply_people(saf_dir, collection_uuid, dry_run=True, refresh_profiles=refresh_profiles)
     # O diretório deve existir: a extração precede a aplicação.
     with (saf_dir / "people.lock").open("a") as lock:
         try:
             fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
             raise RuntimeError("Outra migração de pessoas está usando este SAF") from exc
-        return _apply_people(saf_dir, collection_uuid)
+        return _apply_people(saf_dir, collection_uuid, refresh_profiles=refresh_profiles)
 
 
-def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False):
+def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False, refresh_profiles=False):
     """Cria/reutiliza Person e vincula os trabalhos importados por autoridade.
 
     Exige backend preparado para Authority Framework. Não altera o modelo do
@@ -211,8 +295,9 @@ def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False):
     """
     load_dotenv()
     saf_dir = Path(saf_bundle_dir or os.getenv("SAF_BUNDLE_DIR", "saf_bundle"))
-    data = read_manifest(saf_dir)
+    data = _refresh_profiles(saf_dir) if refresh_profiles else read_manifest(saf_dir)
     result = PeopleApplicationResult()
+    result.profile_issues = len(data.get("profile_issues", []))
     if not data["items"]:
         return result
     collection_uuid = str(UUID(collection_uuid or os.getenv("DSPACE_PERSON_COLLECTION_UUID", "")))
@@ -236,6 +321,7 @@ def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False):
     # Usa a listagem administrativa baseada no banco; não depende de o Solr
     # já ter indexado a criação anterior para recuperar uma execução interrompida.
     person_ids = {}
+    person_items = {}
     page = 0
     while True:
         response = _json(client.api_get(f"{api_url}/core/items", params={
@@ -251,6 +337,7 @@ def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False):
                 if key in person_ids and person_ids[key] != item["uuid"]:
                     raise ValueError(f"Mais de uma Person para {key}")
                 person_ids[key] = str(UUID(item["uuid"]))
+                person_items[item["uuid"]] = item
         if page + 1 >= response.get("page", {}).get("totalPages", 1):
             break
         page += 1
@@ -279,9 +366,69 @@ def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False):
         _validate_fields(item["metadata"], fields, data["people"], person_ids)
         items[source_id] = item
 
+    # Valida todos os perfis existentes antes de qualquer escrita. Uma fusão
+    # manual de identidades também não pode escolher entre perfis conflitantes.
+    profile_targets = {}
     for key, person in data["people"].items():
+        uid = person_ids.get(key)
+        for field, values in _profile_metadata(person).items():
+            desired = values[0]["value"]
+            target = (uid or key, field)
+            if target in profile_targets and profile_targets[target] != desired:
+                raise ValueError(f"Perfis conflitantes para {key} em {field}")
+            profile_targets[target] = desired
+            current = _values(person_items[uid]["metadata"], field) if uid else []
+            if current and desired not in current:
+                raise ValueError(f"Perfil existente diverge de {key} em {field}; revisão necessária")
+
+    def save_field(item, field, desired):
+        # DSpace 10.1 insere com add e extrai só o primeiro elemento de arrays.
+        # Atualiza cada ocorrência com um objeto, preservando ordem e segurança.
+        current = _canonical(item["metadata"].get(field, []))
+        for index, value in enumerate(_canonical(desired)):
+            if index < len(current) and current[index] == value:
+                continue
+            operation = "replace" if index < len(current) else "add"
+            suffix = f"/{index}" if operation == "replace" else ("/-" if current else "")
+            expected = deepcopy(current)
+            if operation == "replace":
+                expected[index] = value
+            else:
+                expected.append(value)
+            if not dry_run:
+                saved = _json(client.api_patch(
+                    url=f"{api_url}/core/items/{item['uuid']}", operation=operation,
+                    path=f"/metadata/{field}{suffix}", value=value,
+                    params={"projection": "allLanguages"},
+                ))
+                if _canonical(saved["metadata"].get(field, [])) != expected:
+                    raise RuntimeError(f"A API não confirmou a gravação de {field}")
+            current = expected
+        item["metadata"][field] = current
+
+    def remove_field(item, field):
+        if not dry_run:
+            saved = _json(client.api_patch(
+                url=f"{api_url}/core/items/{item['uuid']}", operation="remove",
+                path=f"/metadata/{field}", value=None,
+                params={"projection": "allLanguages"},
+            ))
+            if field in saved["metadata"]:
+                raise RuntimeError(f"A API não confirmou a remoção de {field}")
+        item["metadata"].pop(field, None)
+
+    if refresh_profiles and not dry_run:
+        write_json(saf_dir / MANIFEST_NAME, data)
+    enriched = set()
+    for key, person in data["people"].items():
+        profile = _profile_metadata(person)
         if key in person_ids:
             result.reused += 1
+            item = person_items[person_ids[key]]
+            for field, values in profile.items():
+                if not item["metadata"].get(field):
+                    save_field(item, field, values)
+                    enriched.add(item["uuid"])
             continue
         result.created += 1
         if dry_run:
@@ -290,7 +437,7 @@ def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False):
         metadata = {
             "dc.title": [{"value": person["name"]}],
             "dspace.entity.type": [{"value": "Person"}],
-            SOURCE_FIELD: [{"value": key}],
+            SOURCE_FIELD: [{"value": key}], **profile,
         }
         for field, name in (("person.givenName", "given_name"), ("person.familyName", "family_name")):
             if person[name]:
@@ -301,20 +448,7 @@ def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False):
         }), expected=(201,))
         person_ids[key] = str(UUID(created["uuid"]))
         write_json(checkpoint_path, {"api_url": api_url, "collection_uuid": collection_uuid, "people": person_ids})
-
-    def patch(item_uuid, operation, field, value=None):
-        if not dry_run:
-            saved = _json(client.api_patch(
-                url=f"{api_url}/core/items/{item_uuid}", operation=operation,
-                path=f"/metadata/{field}", value=value,
-                params={"projection": "allLanguages"},
-            ))
-            if operation == "remove":
-                valid = field not in saved["metadata"]
-            else:
-                valid = _canonical(saved["metadata"].get(field, [])) == _canonical(value)
-            if not valid:
-                raise RuntimeError(f"A API não confirmou a gravação de {field}")
+    result.people_updated = len(enriched)
 
     for source_id, item in items.items():
         metadata = item["metadata"]
@@ -324,11 +458,10 @@ def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False):
         for old, new in ACADEMIC_RENAMES.items():
             if old not in metadata:
                 continue
-            if new not in metadata:
-                patch(item["uuid"], "add", new, _canonical(metadata[old]))
+            save_field(item, new, metadata[old])
             # A cópia é confirmada antes de remover o campo antigo. Uma
             # interrupção entre as operações pode ser retomada sem perda.
-            patch(item["uuid"], "remove", old)
+            remove_field(item, old)
             changed = True
         for field, keys in fields.items():
             current = metadata.get(field, [])
@@ -338,7 +471,7 @@ def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False):
                 value["authority"] = value.get("authority") or by_name[value["value"]]
                 value["confidence"] = 600  # Choices.CF_ACCEPTED
             if _canonical(current) != _canonical(desired):
-                patch(item["uuid"], "add", field, _canonical(desired))
+                save_field(item, field, desired)
                 changed = True
         if changed:
             result.items_updated += 1

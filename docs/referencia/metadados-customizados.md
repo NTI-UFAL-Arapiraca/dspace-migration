@@ -7,7 +7,7 @@ sem exigir a interface administrativa. O XML versionado é
 
 ## Campos necessários
 
-Estes seis campos são extensões dos esquemas `dc` e `local`, utilizadas pelo
+Estes oito campos são extensões dos esquemas `dc`, `local` e `person`, utilizadas pelo
 [`SQL de extração`](../../sql/extract_metadata.sql) e pelo gerador SAF:
 
 | Campo | Significado local | Origem e regra |
@@ -17,6 +17,8 @@ Estes seis campos são extensões dos esquemas `dc` e `local`, utilizadas pelo
 | `dc.contributor.coadvisor` | Coorientador | Relação de coorientadores. Um valor por pessoa, no formato `Sobrenome, Nome`. |
 | `dc.contributor.referee` | Avaliador da banca | Relação de membros da banca. Um valor por pessoa, no formato `Sobrenome, Nome`. |
 | `local.identifier.legacy` | Identidade da pessoa na origem | `odoo:TABELA:ID`; usado por `apply-people` para retomada sem duplicar pessoas. |
+| `person.identifier.lattes` | Currículo Lattes | URL HTTPS canônica do currículo; extraída do cadastro de orientadores. |
+| `local.person.degree` | Titulação da pessoa | Rótulo original de `ud_biblioteca_orientador_titulacao.name`; não representa cargo. |
 | `dc.description.note` | Observação geral ou nota de acervo | Observações legadas após limpeza e classificação. Notas de restrição vão para `dc.description.provenance`; citações identificadas vão para `dc.identifier.citation`. A classificação é heurística e pode exigir revisão. |
 
 Curso usa `local.course.name` e campus usa `local.campus.name`; os aliases
@@ -56,7 +58,7 @@ executada pelo script de cadastro.
 
 ## Verificação e limites
 
-A administração permite inspecionar os seis campos cadastrados. Essa
+A administração permite inspecionar os oito campos cadastrados. Essa
 inspeção é independente da execução do registro pelo CLI.
 
 Cadastrar um campo permite armazenar seus valores; não cria automaticamente
