@@ -53,22 +53,21 @@ class RfcDocumentationTests(unittest.TestCase):
                     self.assertIn(section, content)
 
     def test_access_statistics_migration_is_documented(self):
-        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-        import_guide = (PROJECT_ROOT / "docs/3_importacao_dspace.md").read_text(
+        reference = (PROJECT_ROOT / "docs/referencia/estatisticas.md").read_text(
             encoding="utf-8"
         )
-
-        for content in (readme, import_guide):
-            with self.subTest(document=content[:40]):
-                self.assertIn("Migração das Estatísticas de Acesso", content)
-                self.assertIn("ud_biblioteca_publicacao.visualizacoes", content)
-                self.assertIn("mapfile.txt", content)
-                self.assertIn("uv run inject-stats --dry-run", content)
-                self.assertIn("SOLR_BATCH_SIZE", content)
-                self.assertIn("determinísticos", content)
+        guide = (PROJECT_ROOT / "docs/guias/estatisticas.md").read_text(
+            encoding="utf-8"
+        )
+        for topic in ("Migração das Estatísticas de Acesso",
+                      "ud_biblioteca_publicacao.visualizacoes", "mapfile.txt",
+                      "SOLR_BATCH_SIZE", "determinísticos"):
+            self.assertIn(topic, reference)
+        self.assertIn("uv run inject-stats --dry-run", guide)
+        self.assertIn("uv run inject-stats", guide)
 
     def test_seo_and_oai_maintenance_is_documented(self):
-        guide = (PROJECT_ROOT / "docs/4_operacao_manutencao.md").read_text(
+        guide = (PROJECT_ROOT / "docs/guias/operacao.md").read_text(
             encoding="utf-8"
         )
 

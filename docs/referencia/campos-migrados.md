@@ -5,7 +5,7 @@ Este documento descreve o que o pipeline realmente migra hoje. As fontes de verd
 O fluxo parte do banco PostgreSQL legado `biblioteca`, gera um pacote SAF e importa os itens no DSpace. Alguns dados não viram metadados Dublin Core: eles são usados para roteamento, controle de acesso, arquivos ou estatísticas.
 
 O cadastro dos seis campos locais e suas definições está documentado em
-[Metadados customizados](metadados_customizados.md), com XML versionado e
+[Metadados customizados](metadados-customizados.md), com XML versionado e
 execução pelo CLI oficial do DSpace. Orientador usa um campo padrão;
 `dc.publisher.place` e `dc.type.degree`, sem uso no fluxo atual, foram retirados
 do cadastro.
@@ -39,7 +39,7 @@ O SQL também exporta a coluna estruturada `pessoas`, com tabela e ID de
 origem para cada participação. Ela gera o manifesto `people.json` e os
 textos SAF. Após a importação, `apply-people` cria/reutiliza entidades Person
 por identificador de origem e grava seus UUIDs como autoridades nos campos.
-Não cria EPersons. Veja [Pessoas e vínculos](5_pessoas_e_vinculos.md).
+Não cria EPersons. Veja [Pessoas e vínculos](pessoas-e-vinculos.md).
 
 ## 3. Observações, Citações e Notas Internas
 

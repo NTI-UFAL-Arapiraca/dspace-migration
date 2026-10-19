@@ -3,12 +3,12 @@
 O DSpace permite ampliar o registro de metadados. Neste projeto, o cadastro é
 automatizado pelo CLI oficial do DSpace 10.1, sem edição direta das tabelas e
 sem exigir a interface administrativa. O XML versionado é
-[`config/registries/migration-metadata.xml`](../config/registries/migration-metadata.xml).
+[`config/registries/migration-metadata.xml`](../../config/registries/migration-metadata.xml).
 
 ## Campos necessários
 
 Estes seis campos são extensões dos esquemas `dc` e `local`, utilizadas pelo
-[`SQL de extração`](../sql/extract_metadata.sql) e pelo gerador SAF:
+[`SQL de extração`](../../sql/extract_metadata.sql) e pelo gerador SAF:
 
 | Campo | Significado local | Origem e regra |
 | --- | --- | --- |
@@ -23,56 +23,15 @@ Curso usa `local.course.name` e campus usa `local.campus.name`; os aliases
 antigos eram `dc.description.degree` e `dc.publisher.department`.
 Novos SAFs escrevem os campos em `metadata_local.xml`. `apply-people`
 converte os valores antigos nos itens já importados, sem excluir definições
-do registro. Veja [Pessoas e vínculos](5_pessoas_e_vinculos.md).
+do registro. Veja [Pessoas e vínculos](pessoas-e-vinculos.md).
 
 `dc.contributor.advisor` já existe no registro padrão do DSpace 10.1 e não
 precisa ser recriado. Títulos, autores, resumos, assuntos, datas e outros
 campos padrão continuam sendo usados. O mapeamento completo está em
-[`0_campos_a_migrar.md`](0_campos_a_migrar.md).
+[Campos migrados](campos-migrados.md).
 
-## Aplicar o registro
-
-Execute antes de importar os itens SAF. O backend deve estar iniciado, com
-`/dspace/bin/dspace` disponível e acesso ao banco DSpace de destino. O usuário
-que executa o script precisa ter acesso ao Docker; não são necessárias
-credenciais da API REST nem do PostgreSQL no script.
-
-Na raiz deste repositório:
-
-```bash
-./scripts/register_custom_fields.sh NOME_OU_ID_DO_CONTAINER_DSPACE
-```
-
-O argumento identifica o **container do backend**, não o PostgreSQL. Use
-`docker ps` para descobrir seu nome. Sem argumento, o script usa
-`DSPACE_CONTAINER` do ambiente ou `dspace`. O script não carrega o `.env`.
-
-Em produção, também é possível obter o ID pelo Compose. Execute na pasta da
-instalação DSpace (ajuste o caminho do repositório da migração):
-
-```bash
-docker compose --env-file .env -p d10 \
-  -f docker-compose-dist.yml -f docker-compose-rest.yml \
-  -f docker-compose-prod.yml ps -q dspace
-```
-
-Passe o ID retornado ao script:
-
-```bash
-~/dspace-migration/scripts/register_custom_fields.sh ID_RETORNADO
-```
-
-O script resolve o XML em relação à sua própria localização, copia-o para um
-arquivo temporário no container e executa:
-
-```bash
-/dspace/bin/dspace registry-loader -m /tmp/ARQUIVO_TEMPORARIO.xml
-```
-
-O arquivo temporário é removido ao terminar. Falhas na cópia ou no importador
-fazem o script terminar com código diferente de zero; consulte a saída do CLI.
-O cadastro é independente da hierarquia de comunidades e coleções e não é
-executado automaticamente por `uv run migrate`.
+O cadastro integrado é descrito na [preparação acadêmica](../../../dspace-bca/docs/guias/preparacao-academica.md).
+Para executar somente o registro, consulte a [importação por etapas](../guias/importacao-por-etapas.md).
 
 ## Repetição e instalações existentes
 
@@ -91,19 +50,14 @@ O antigo script também tentava cadastrar `dc.publisher.place` e
 foram retirados do cadastro. Executar o novo script não os apaga de bancos
 existentes.
 
-Antes de remover esses dois campos em uma instalação existente, confira se
-há valores ou configurações locais que os utilizam. Na administração do
-DSpace, abra o registro de metadados, selecione o esquema `dc` e os campos
-correspondentes. Remova somente as definições sem uso; se houver valores,
-primeiro decida como preservá-los. A exclusão é uma manutenção separada do
-cadastro e não é executada por este script.
+A exclusão de definições antigas é uma manutenção separada. Ela depende de
+verificar valores e configurações ainda vinculados aos campos e não é
+executada pelo script de cadastro.
 
 ## Verificação e limites
 
-Após executar o script, confira no registro de metadados da administração
-que os seis campos estão presentes. A interface é uma opção de inspeção,
-não uma etapa obrigatória para o cadastro. Registre a saída do CLI junto à
-execução da migração e teste a importação de um pacote SAF representativo.
+A administração permite inspecionar os seis campos cadastrados. Essa
+inspeção é independente da execução do registro pelo CLI.
 
 Cadastrar um campo permite armazenar seus valores; não cria automaticamente
 um controle no formulário de submissão, uma seção na página do item, uma

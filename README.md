@@ -1,17 +1,20 @@
-# Migração de Repositório Institucional: Odoo (PostgreSQL) ➔ DSpace (SAF)
+# Migração do repositório: Odoo → DSpace
 
-Este projeto automatiza o processo de extração, limpeza, transformação de metadados e empacotamento de acervo acadêmico (Trabalhos de Conclusão de Curso e Artigos Científicos) legado de um banco relacional PostgreSQL (ERP Odoo) para o formato padrão **SAF (Simple Archive Format)** aceito nativamente pelo repositório **DSpace**.
+Este projeto extrai metadados e arquivos do PostgreSQL legado, gera pacotes
+SAF e importa trabalhos e pessoas bibliográficas no DSpace **10.1**.
+O projeto irmão `dspace-bca` mantém a implantação e a interface do destino.
 
-Para executar a atualização e a migração em produção, siga o
-[passo a passo](docs/6_passo_a_passo_migracao.md), com os comandos na ordem.
+## Guias de execução
 
-Para a preparação completa do servidor, pessoas e formulários, comece pelo
-[guia do DSpace acadêmico](../dspace-bca/docs/guia-dspace-academico.md).
-Os projetos `dspace-migration` e `dspace-bca` devem ficar lado a lado.
+- [Inicializar o ambiente da migração](docs/guias/inicializacao.md).
+- [Executar um piloto local](docs/guias/migracao-local.md).
+- [Executar ou retomar a migração em produção](docs/guias/migracao-producao.md).
+- [Executar a importação por etapas](docs/guias/importacao-por-etapas.md).
+- [Migrar estatísticas históricas](docs/guias/estatisticas.md).
+- [Operar, verificar e testar](docs/guias/operacao.md).
 
----
+## Funcionamento do pipeline
 
-## Objetivo e Contexto
 
 A base de origem é composta por cerca de 40.000 registros mantidos pela Biblioteca Universitária. A migração foi dividida em etapas automatizadas:
 1. **Higienização de Metadados e Estruturação SAF**: Limpeza de HTML, padronização de datas, triagem de observações vs citações e geração dos arquivos de metadados XML (`dublin_core.xml`).
@@ -21,231 +24,26 @@ A base de origem é composta por cerca de 40.000 registros mantidos pela Bibliot
 5. **Pessoas e vínculos**: Criação de entidades Person por ID legado e associação de autoria, orientação, coorientação e banca, sem contas de acesso.
 6. **Estatísticas históricas**: As contagens legadas de visualizações podem ser recriadas no core de estatísticas do Solr.
 
----
 
-## Quickstart
+O pipeline completo inclui OAI-PMH e sitemaps ao final. A preparação do
+servidor e do administrador é externa ao pipeline. Uma importação SAF
+adiciona itens; a retomada de pessoas e vínculos usa `apply-people`.
+Os cadastros Person não criam contas EPerson.
 
-O `uv run migrate` executa o pipeline de dados, mas **não** instala nem inicia o
-Docker, não restaura o banco de origem, não cria o administrador do DSpace e
-não cadastra os campos customizados. Em uma instalação limpa, execute os passos
-abaixo a partir da raiz do repositório.
+## Referência
 
-### 1. Preparar o ambiente
+- [Campos migrados e regras de transformação](docs/referencia/campos-migrados.md).
+- [Formato SAF e extração dos anexos](docs/referencia/extracao-saf.md).
+- [Registro de metadados customizados](docs/referencia/metadados-customizados.md).
+- [Pessoas, identidades, checkpoints e conflitos](docs/referencia/pessoas-e-vinculos.md).
+- [Estatísticas históricas](docs/referencia/estatisticas.md).
+- [Arquitetura do DSpace](../dspace-bca/docs/referencia/implantacao.md).
+- [Índice da documentação](docs/README.md).
 
-São necessários Docker com o plugin Compose, `uv` e as portas `4000`, `5432`,
-`5440`, `8080` e `8983` livres.
+## Pacote e comandos disponíveis
 
-```bash
-cp .env.example .env
-uv sync
-mkdir -p saf_bundle
-```
-
-Revise o `.env`, principalmente as credenciais `DB_*` do PostgreSQL de origem,
-`DSPACE_API_USER`/`DSPACE_API_PASSWORD` e o nome público `DSPACE_NAME`. O
-diretório `SAF_BUNDLE_DIR` deve ser o mesmo montado no container DSpace. Com o
-valor padrão `saf_bundle`, isso já é feito automaticamente. Para usar outro
-disco, configure ambos com o mesmo caminho absoluto:
-
-```dotenv
-SAF_BUNDLE_DIR=/caminho/absoluto/saf_bundle
-DSPACE_SAF_HOST_DIR=/caminho/absoluto/saf_bundle
-```
-
-Informe também o caminho absoluto do banco MaxMind GeoLite2 City. O arquivo
-não faz parte do repositório e é montado somente para leitura no backend:
-
-```dotenv
-GEOLITE2_CITY_DB_PATH=/caminho/absoluto/GeoLite2-City.mmdb
-```
-
-O DSpace 10 usa o formato `.mmdb` e a propriedade
-`usage-statistics.dbfile`. O exemplo antigo `GeoLiteCity.dat` não se aplica a
-esta versão.
-
-Backend, Solr, CLI e frontend usam o lançamento `dspace-10.1`. Mantenha
-`DSPACE_VER` e `DSPACE_ANGULAR_TAG` alinhadas nesse valor. As imagens com tags
-`dspace-10_x` acompanham código ainda não lançado; `latest` e `latest-test`
-também não são usadas porque podem avançar para outra versão principal.
-
-### 2. Disponibilizar o banco de origem
-
-Se o PostgreSQL legado já estiver acessível pelas variáveis `DB_*`, pule este
-passo. Para usar o banco local definido em `biblioteca-compose.yml`, coloque os
-dumps esperados em `dumps/` e restaure-os com:
-
-```bash
-./scripts/init-db.sh
-```
-
-O script inicia o PostgreSQL na porta `5440` e restaura os dumps cujos nomes
-estão definidos em `scripts/init-db.sh`. Ajuste esses nomes se os arquivos forem
-diferentes. Se o volume já estiver restaurado, basta iniciá-lo:
-
-```bash
-docker compose -p biblioteca-migracao -f biblioteca-compose.yml up -d
-```
-
-### 3. Iniciar o DSpace de desenvolvimento
-
-No projeto irmão `dspace-bca`, prepare `.env.development` conforme seu README,
-com a pasta SAF igual à da migração. O ambiente `d10dev` é isolado da produção:
-
-```bash
-cd ../dspace-bca
-docker compose --env-file .env.development -p d10dev \
-  -f docker-compose-rest.yml -f docker-compose-dev.yml up -d --build
-```
-
-Aguarde a API em `http://localhost:8080/server/api`. Se ainda não houver
-administrador, crie-o interativamente e preencha `DSPACE_API_USER` e
-`DSPACE_API_PASSWORD` no `.env` da migração:
-
-```bash
-docker compose --env-file .env.development -p d10dev \
-  -f docker-compose-rest.yml -f docker-compose-dev.yml \
-  exec dspace /dspace/bin/dspace create-administrator
-```
-
-### 4. Preparar metadados e pessoas
-
-Ainda em `dspace-bca`, execute:
-
-```bash
-bash scripts/prepare-academic.sh --development --project-name d10dev \
-  --env-file .env.development --migration-env-file ../dspace-migration/.env
-
-docker compose --env-file .env.development -p d10dev \
-  -f docker-compose-rest.yml -f docker-compose-dev.yml restart dspace
-cd ../dspace-migration
-```
-
-O comando registra os seis campos, inicializa os tipos e cria/reutiliza a
-coleção Person, salvando seu UUID no `.env` da migração. A implantação já
-carrega os arquivos de autoridade; não é necessário copiar plugins.
-Para produção e retomada de lotes existentes, use o guia completo.
-
-### 5. Executar a migração dos trabalhos e pessoas
-
-```bash
-uv run migrate --docker-container d10dev-dspace --skip-stats
-```
-
-O comando realiza, nesta ordem:
-
-1. extração, limpeza e geração dos metadados SAF;
-2. extração e conversão dos PDFs;
-3. criação/reutilização das comunidades e coleções pela API REST;
-4. geração e execução de `import_all.sh` dentro do container `dspace`;
-5. aplicação das políticas de embargo aos bitstreams;
-6. criação/reutilização de pessoas e aplicação dos vínculos bibliográficos;
-7. injeção opcional das estatísticas históricas no Solr (adiada com `--skip-stats`);
-8. reconstrução do índice OAI-PMH no core `oai` do Solr;
-9. geração dos sitemaps XML e HTML para mecanismos de busca.
-
-Ao terminar, revise `routing_report.csv`, `pdf_extraction_issues.csv` (se
-existir) e um item bilíngue na interface em `http://localhost:4000`.
-
-Para preencher do zero o índice OAI-PMH depois da importação inicial:
-
-```bash
-uv run rebuild-oai
-```
-
-Confira o endpoint com:
-
-```bash
-curl --fail \
-  'http://localhost:8080/server/oai/request?verb=Identify'
-```
-
-O pipeline também gera os sitemaps imediatamente; o backend volta a gerá-los
-todos os dias às 01:15. Para executar somente essa etapa:
-
-```bash
-uv run generate-sitemaps
-```
-
-Valide os três requisitos básicos de SEO:
-
-```bash
-curl --fail http://localhost:4000/robots.txt
-curl --fail http://localhost:4000/sitemap_index.xml
-curl --fail http://localhost:4000/sitemap_index.html
-```
-
-O container `dspace-angular` usa o runtime SSR oficial de produção. Uma
-requisição direta a uma página de item deve retornar o título e os metadados no
-HTML, mesmo sem executar JavaScript.
-
-Em produção, configure `DSPACE_SERVER_URL`, `DSPACE_UI_URL` e
-`DSPACE_ADMIN_EMAIL` no `.env` com o domínio HTTPS e o contato institucionais.
-O endpoint público será
-`{DSPACE_SERVER_URL}/{OAI_PATH}/request`. Para gerar miniaturas e texto
-indexável dos PDFs, execute:
-
-```bash
-cd ../dspace-bca
-docker compose --env-file .env.development -p d10dev \
-  -f docker-compose-rest.yml -f docker-compose-dev.yml \
-  exec -T dspace /dspace/bin/dspace filter-media
-```
-
-> [!IMPORTANT]
-> `uv run migrate` adiciona itens. Não execute novamente contra o mesmo banco
-> DSpace depois de uma importação bem-sucedida, pois isso pode criar duplicatas.
-> Uma nova execução completa é apropriada quando os volumes do DSpace foram
-> removidos e a instância está vazia.
-
-### Migração das Estatísticas de Acesso para o Solr
-
-A última etapa do `uv run migrate` recria no core `statistics` do Solr as
-visualizações históricas armazenadas em
-`ud_biblioteca_publicacao.visualizacoes`. Esse dado não vira metadado Dublin
-Core. Para cada visualização legada é criado um evento de consulta do item.
-
-O relacionamento com o novo item ocorre em três passos:
-
-1. o importador SAF grava em cada coleção um `mapfile.txt`, relacionando
-   `item_<id da publicação>` ao handle criado pelo DSpace;
-2. o pipeline resolve esse handle para o UUID do item no PostgreSQL do DSpace;
-3. os eventos são enviados em lotes ao endpoint de atualização do core
-   `statistics` e recebem um commit final.
-
-As datas dos eventos são distribuídas uniformemente entre 1º de janeiro de
-`ano_pub` e a data da migração. Quando o ano está ausente ou inválido, é usada
-uma janela de cinco anos. Os identificadores dos eventos são determinísticos;
-portanto, repetir a injeção para os mesmos itens sobrescreve os eventos
-históricos em vez de duplicá-los.
-
-Essa etapa exige o banco legado, o PostgreSQL do DSpace e o Solr acessíveis
-pelas variáveis `DB_*`, `DSPACE_DB_*`, `SOLR_URL` e `SOLR_BATCH_SIZE` do `.env`.
-Ela só pode rodar depois da importação SAF, pois depende dos `mapfile.txt`.
-
-Para conferir a quantidade que será migrada sem escrever no Solr:
-
-```bash
-uv run inject-stats --dry-run
-```
-
-Para executar ou retomar apenas esta etapa:
-
-```bash
-uv run inject-stats
-```
-
-O `uv run migrate --skip-stats` pula a injeção. Itens com visualizações na
-origem, mas sem handle/UUID correspondente no DSpace, são informados e
-ignorados. O resumo final exibe o total de documentos Solr enviados e de itens
-processados.
-
----
-
-## Estrutura do Pacote e Comandos CLI (`uv`)
 
 O projeto é empacotado via **`uv`** com código estruturado em `src/dspace_migration/`.
-
-### Comandos CLI Disponíveis:
 
 | Comando | Descrição |
 | --- | --- |
@@ -260,51 +58,28 @@ O projeto é empacotado via **`uv`** com código estruturado em `src/dspace_migr
 | `uv run generate-sitemaps` | Gera os índices XML e HTML anunciados em `robots.txt`. |
 | `uv run migrate` | Executa o pipeline completo: extração, hierarquia, importação SAF, embargos, pessoas, estatísticas, OAI e sitemaps. |
 
----
 
-## Estrutura de Arquivos
+## Estrutura de arquivos
 
-- **`src/dspace_migration/`**: Código-fonte do pacote Python.
-  - `people.py` — Manifesto de identidades, criação de Person e aplicação retomável de vínculos.
-  - `metadata.py` — Extração e higienização de metadados, geração SAF hierárquica.
-  - `pdfs.py` — Extração de PDFs binários e conversão PDF/A.
-  - `organization.py` — Gestão da hierarquia DSpace (API REST) e roteamento de cursos.
-  - `cli.py` — Entry points dos comandos CLI.
-- **`sql/extract_metadata.sql`**: Consulta SQL para extração dos metadados brutos do PostgreSQL legado.
-- **`dspace-organization/`**: Configuração da estrutura organizacional do DSpace.
-  - `communities.json` — Árvore de comunidades e coleções a criar.
-  - `map.json` — Mapeamento de nomes antigos de curso para coleções destino.
-- **[`scripts/register_custom_fields.sh`](scripts/register_custom_fields.sh)**: Cadastro dos campos pelo CLI oficial `registry-loader`, com o [XML versionado](config/registries/migration-metadata.xml).
-- **[Metadados customizados](docs/metadados_customizados.md)**: Significado dos campos, execução e manutenção do registro.
-- **[`scripts/init-db.sh`](scripts/init-db.sh)**: Script para subir o banco legado e carregar os dumps.
-- **[`biblioteca-compose.yml`](biblioteca-compose.yml)**: Docker Compose do banco PostgreSQL legado.
-- **[`../dspace-bca/`](../dspace-bca/)**: Projeto irmão com a implantação Docker da instância do DSpace.
-- **[`docs/`](docs/)**: Guia detalhado passo a passo da migração.
+| Caminho | Responsabilidade |
+| --- | --- |
+| `src/dspace_migration/metadata.py` | Transformações e geração de XML SAF. |
+| `src/dspace_migration/pdfs.py` | Extração de anexos e conversão PDF/A. |
+| `src/dspace_migration/organization.py` | Hierarquia, roteamento e script de importação. |
+| `src/dspace_migration/people.py` | Identidades, criação de Person e vínculos retomáveis. |
+| `src/dspace_migration/embargoes.py` | Políticas de liberação dos bitstreams. |
+| `src/dspace_migration/statistics.py` | Eventos de visualização legados. |
+| `src/dspace_migration/cli.py` | Comandos CLI e sequência do pipeline. |
+| `sql/extract_metadata.sql` | Consulta dos metadados de origem. |
+| `dspace-organization/` | Hierarquia de comunidades e mapeamento de cursos. |
+| `config/registries/` | Registro dos campos adicionais. |
+| `scripts/init-db.sh` e `biblioteca-compose.yml` | Banco legado local e restauração dos dumps. |
+| `scripts/register_custom_fields.sh` | Cadastro isolado de campos pelo CLI oficial. |
+| `docs/guias/` | Procedimentos de execução. |
+| `docs/referencia/` | Descrição do funcionamento e dos dados. |
 
----
+## Referências externas
 
-## Como Executar o Pipeline
-
-Consulte o guia completo passo a passo na pasta [`docs/`](docs/):
-
-1. **[Etapa 1: Extração e Geração do Pacote SAF](docs/1_extracao_saf.md)**
-2. **[Etapa 2: Configuração e Preparação do DSpace](docs/2_configuracao_dspace.md)**
-3. **[Etapa 3: Importação Final no DSpace](docs/3_importacao_dspace.md)**
-4. **[Operação e manutenção: SEO, OAI, volumes e atualizações](docs/4_operacao_manutencao.md)**
-
-## Testes automatizados
-
-Execute a suíte completa a partir da raiz do projeto:
-
-```bash
-uv run python -m unittest discover -s tests -v
-```
-
----
-
-## Links Úteis e Referências
-
-- [Documentação Oficial DSpace](https://dspace.org/)
-- [DSpace Simple Archive Format (SAF) Spec](https://wiki.lyrasis.org/pages/viewpage.action?pageId=104566653)
-- [DSpace Docker Setup](https://wiki.lyrasis.org/display/DSPACE/Try+out+DSpace+9#TryoutDSpace9-InstallviaDocker)
-- [DSpace REST Client (Python)](https://pypi.org/project/dspace-rest-client/)
+- [DSpace](https://dspace.org/).
+- [Simple Archive Format](https://wiki.lyrasis.org/pages/viewpage.action?pageId=104566653).
+- [Cliente REST Python](https://pypi.org/project/dspace-rest-client/).

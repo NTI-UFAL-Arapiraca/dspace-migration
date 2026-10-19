@@ -1,3 +1,5 @@
+# Pessoas e vínculos bibliográficos
+
 A migração preserva pessoas bibliográficas e suas participações, sem criar
 contas de acesso. Um registro `Person` pode ser reutilizado por vários
 trabalhos e papéis. `EPerson` continua reservado aos usuários que precisam
@@ -12,36 +14,10 @@ banca mantêm campos separados. A API é utilizada somente ao executar
 
 A implantação `dspace-bca` já contém os plugins configurados, seus mounts,
 os formulários e os perfis de pessoas. Não copie o arquivo de exemplo para
-o container. Siga o [guia completo do DSpace acadêmico](../../dspace-bca/docs/guia-dspace-academico.md),
-com conceitos, preparação e comandos para cada ambiente.
+o container. Os procedimentos estão na [preparação acadêmica](../../../dspace-bca/docs/guias/preparacao-academica.md)
+e nos [roteiros de migração](../README.md).
 
-Depois de iniciar o backend e conferir as credenciais no `.env` da migração,
-execute em `dspace-bca`:
-
-```bash
-# Desenvolvimento isolado
-bash scripts/prepare-academic.sh --development --project-name d10dev \
-  --env-file .env.development --migration-env-file ../dspace-migration/.env
-```
-
-```bash
-# Produção
-bash scripts/prepare-academic.sh --project-name d10 \
-  --env-file .env --migration-env-file ../dspace-migration/.env
-```
-
-O script registra os seis campos, inicializa os tipos e cria/reutiliza a
-coleção Person. Salva `DSPACE_PERSON_COLLECTION_UUID` no `.env` informado.
-Se o UUID já estiver preenchido, respeita sua seleção e valida o tipo da
-coleção. As credenciais são do administrador da importação; nenhuma conta
-é criada para os autores. Reinicie o backend após criar a coleção e
-reindexe Discovery depois dos vínculos, conforme o guia.
-
-Essa configuração requer um destino escolhido para Authority Framework.
-Se já houver relações tradicionais com metadados virtuais, valide o plano
-antes de alterar o modelo: o DSpace 10 não fornece conversão automática de
-ida e volta.
-[Limitação documentada pelos mantenedores](https://github.com/DSpace/DSpace/issues/12120).
+## Identidade na origem
 
 O SQL exporta `pessoas` como JSON estruturado contendo tabela, ID, nome e
 sobrenome para cada papel. O mesmo conjunto gera o texto SAF e o manifesto
@@ -61,24 +37,7 @@ administrativa reconhece todos os identificadores. Não edite apenas o
 `people-map.json`: o identificador persistido no DSpace é a referência para
 recuperar execuções interrompidas.
 
-Depois de gerar os pacotes e concluir sua importação SAF:
-
-```bash
-uv run apply-people --dry-run
-uv run apply-people
-```
-
-Para selecionar explicitamente um lote/destino:
-
-```bash
-uv run apply-people --saf-bundle-dir /caminho/saf --collection-uuid UUID_DA_COLECAO
-```
-
-O `uv run migrate` executa essa etapa depois dos embargos e antes das
-estatísticas, OAI e sitemaps. `--skip-people` permite adiar somente o
-enriquecimento. Ao retomá-lo, execute `apply-people`, sem repetir a importação
-SAF que adiciona os trabalhos. `--skip-docker` mantém o comportamento anterior
-de regenerar a extração; use a mesma origem e confira o lote/mapfiles.
+## Aplicação, checkpoints e conflitos
 
 O comando primeiro valida os trabalhos do manifesto contra os mapfiles e
 os valores existentes na API. Em seguida, recupera pessoas pelo

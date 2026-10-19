@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Extensões usadas pelo SAF. Os esquemas dc e local já existem no DSpace 10.1.
      Não declarar dc-schema: preserva os namespaces instalados.
-     Ver docs/metadados_customizados.md antes de mudar nomes ou significados. -->
+     Ver docs/referencia/metadados-customizados.md antes de mudar nomes ou significados. -->
 <dspace-dc-types>
   <dc-type>
     <schema>local</schema>
