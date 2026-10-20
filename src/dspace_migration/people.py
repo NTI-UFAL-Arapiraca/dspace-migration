@@ -34,6 +34,7 @@ ACADEMIC_RENAMES = {
     "dc.publisher.department": "local.campus.name",
 }
 SOURCE_FIELD = "local.identifier.legacy"
+PRIVATE_EMAIL_SECURITY_LEVEL = 2  # Administradores e proprietário, conforme DSpace
 MANIFEST_NAME = "people.json"
 PROFILE_FIELDS = {
     "email": "person.email",
@@ -105,7 +106,14 @@ def _profile(record, key, issues):
 
 
 def _profile_metadata(person):
-    return {field: [{"value": person[key]}] for key, field in PROFILE_FIELDS.items() if person.get(key)}
+    metadata = {
+        field: [{"value": person[key]}]
+        for key, field in PROFILE_FIELDS.items()
+        if person.get(key)
+    }
+    if "person.email" in metadata:
+        metadata["person.email"][0]["securityLevel"] = PRIVATE_EMAIL_SECURITY_LEVEL
+    return metadata
 
 
 def build_manifest(rows: list[dict]) -> dict:
@@ -426,7 +434,20 @@ def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False, r
             result.reused += 1
             item = person_items[person_ids[key]]
             for field, values in profile.items():
-                if not item["metadata"].get(field):
+                current_values = item["metadata"].get(field, [])
+                if field == "person.email" and current_values:
+                    desired_email = values[0]["value"]
+                    private_values = deepcopy(current_values)
+                    changed = False
+                    for value in private_values:
+                        if (value.get("value") == desired_email and
+                                value.get("securityLevel") != PRIVATE_EMAIL_SECURITY_LEVEL):
+                            value["securityLevel"] = PRIVATE_EMAIL_SECURITY_LEVEL
+                            changed = True
+                    if changed:
+                        save_field(item, field, private_values)
+                        enriched.add(item["uuid"])
+                elif not current_values:
                     save_field(item, field, values)
                     enriched.add(item["uuid"])
             continue

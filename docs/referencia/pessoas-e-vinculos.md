@@ -44,8 +44,10 @@ os valores existentes na API. Em seguida, recupera pessoas pelo
 `local.identifier.legacy` usando a listagem administrativa baseada no banco,
 sem depender da atualização imediata do Solr. Pessoas novas recebem nome,
 tipo e identificador de origem. E-mail, currículo Lattes e titulação são
-incluídos quando disponíveis e válidos. Nenhuma conta, senha ou data de
-nascimento é criada.
+incluídos quando disponíveis e válidos. E-mails recebem `securityLevel: 2`
+(administradores e proprietário), inclusive ao atualizar uma Person migrada
+que já tenha o mesmo endereço. Nenhuma conta, senha ou data de nascimento é
+criada.
 [Criação administrativa de itens](https://raw.githubusercontent.com/DSpace/RestContract/main/items.md).
 
 O arquivo `people-map.json`, dentro do SAF, registra o destino e os UUIDs.
@@ -69,6 +71,13 @@ E-mails são limpos e têm o domínio normalizado. Lattes aceita URL do domínio
 `person.identifier.lattes`. Formatos inválidos são omitidos e contabilizados
 em `profile_issues`, sem copiar o conteúdo inválido para mensagens. O campo
 de e-mail é `person.email`. A preparação acadêmica registra os campos novos.
+A migração marca cada endereço como nível 2 (administradores e proprietário),
+para que a privacidade seja aplicada pelo DSpace e persista fora da página
+pública. Na configuração padrão do DSpace 10.1, `metadata.hide.person.email`
+também oculta o campo da API para não administradores e tem precedência
+sobre a visibilidade por valor. A regra de nível 2 se aplica tanto a novas
+Person quanto a endereços de origem já presentes em Person reutilizadas;
+valores divergentes continuam exigindo revisão.
 
 `apply-people` também enriquece Person existentes. Preserva campos vazios na
 origem e valores adicionais da curadoria; um campo já preenchido com valor
