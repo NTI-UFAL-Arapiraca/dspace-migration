@@ -3,8 +3,8 @@
 # ==============================================================================
 # Script de Registro de Campos Customizados do Dublin Core no DSpace
 # ==============================================================================
-# Este script registra exclusivamente os campos de metadados ausentes por 
-# padrão no esquemas Dublin Core ('dc') do DSpace, necessários para a migração.
+# Este script registra campos de metadados ausentes dos esquemas Dublin Core
+# ('dc') e local do DSpace, necessários para a migração.
 #
 # Uso:
 #   chmod +x register_custom_fields.sh
@@ -51,6 +51,29 @@ WHERE NOT EXISTS (
           mfr.qualifier = elem.qualifier 
           OR (mfr.qualifier IS NULL AND elem.qualifier IS NULL)
       )
+);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM metadataschemaregistry WHERE short_id = 'local'
+    ) THEN
+        RAISE EXCEPTION 'O esquema de metadados local não está registrado no DSpace.';
+    END IF;
+END $$;
+
+INSERT INTO metadatafieldregistry (metadata_schema_id, element, qualifier, scope_note)
+SELECT
+    (SELECT metadata_schema_id FROM metadataschemaregistry WHERE short_id = 'local'),
+    'date',
+    'defense',
+    'Data da defesa do trabalho acadêmico, separada do ano de publicação em dc.date.issued.'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM metadatafieldregistry mfr
+    JOIN metadataschemaregistry msr ON mfr.metadata_schema_id = msr.metadata_schema_id
+    WHERE msr.short_id = 'local'
+      AND mfr.element = 'date'
+      AND mfr.qualifier = 'defense'
 );
 EOF
 

@@ -3,6 +3,8 @@
 - Status: aceita
 - Escopo: frontend
 
+A RFC 0014 revisa o mapeamento do ano de publicação e da data de defesa.
+
 ## Contexto
 
 `dc.date.issued` chegava em ISO e era mostrado dessa forma mesmo quando a

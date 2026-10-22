@@ -107,7 +107,8 @@ docker compose --env-file ../.env -p d10 -f cli.yml run --rm \
 ### 4. Cadastrar os campos customizados
 
 Volte à raiz do repositório e execute o cadastro idempotente dos campos usados
-pela migração, incluindo orientador, coorientador e membros da banca:
+pela migração, incluindo ano de publicação, data de defesa, orientador,
+coorientador e membros da banca:
 
 ```bash
 cd ..

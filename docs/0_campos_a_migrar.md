@@ -12,7 +12,8 @@ O fluxo parte do banco PostgreSQL legado `biblioteca`, gera um pacote SAF e impo
 | Título alternativo | `ud_biblioteca_publicacao.titulo_abstract` | `dc.title.alternative` | O valor isolado `Abstract` é descartado por não representar um título. |
 | Resumo em português | `ud_biblioteca_publicacao.resumo` | `dc.description.abstract`, idioma `pt` | Remove HTML e normaliza espaços e quebras de linha. O qualifier usa o idioma-base porque o filtro de metadados do DSpace 10 reduz a locale `pt_BR` para `pt`. |
 | Abstract em inglês | `ud_biblioteca_publicacao.abstract` | `dc.description.abstract`, idioma `en` | Recebe a mesma limpeza. Se for idêntico ao resumo em português, a duplicata em inglês é removida. |
-| Data de defesa | `ud_biblioteca_publicacao.data_defesa` | `dc.date.issued` | Mantida no formato retornado pelo PostgreSQL. `dc.date.submitted` não é gerado pela migração. |
+| Ano de publicação | `ud_biblioteca_publicacao.ano_pub` | `dc.date.issued` | Mantido com precisão de ano, sem completar mês ou dia. |
+| Data de defesa | `ud_biblioteca_publicacao.data_defesa` | `local.date.defense` | Normalizada para ISO e separada do ano de publicação. |
 | Número de páginas | `ud_biblioteca_publicacao.numero_paginas` | `dc.format.extent` | Migrado como texto. |
 | Tipo de documento | `ud_biblioteca_publicacao.tipo_id` → `ud_biblioteca_publicacao_tipo.name` | `dc.type` | Mantém a denominação existente na base. |
 | Curso | `ud_biblioteca_publicacao.curso_id` → `ud_curso.name` | `dc.description.degree` | Também é usado para escolher a coleção de destino; veja a seção 4. |
@@ -83,7 +84,7 @@ As decisões de acesso dependem exclusivamente de `data_limite_embargo` e `autor
 | Dado migrado | Origem | Destino no DSpace | Tratamento aplicado |
 | --- | --- | --- | --- |
 | Total histórico de visualizações | `ud_biblioteca_publicacao.visualizacoes` | Core `statistics` do Solr | Para valores maiores que zero, o pipeline gera a mesma quantidade de eventos de visualização associados ao UUID do item. |
-| Ano de referência | `ud_biblioteca_publicacao.ano_pub` | Data dos eventos sintéticos no Solr | Os eventos são distribuídos uniformemente entre janeiro do ano de publicação e a data da migração. Sem ano, usa-se uma janela de cinco anos. |
+| Ano de referência | `ud_biblioteca_publicacao.ano_pub` | Data dos eventos sintéticos no Solr | Os eventos são distribuídos uniformemente entre janeiro do ano de publicação e a data da migração. Sem ano, usa-se uma janela de cinco anos. O mesmo ano também é gravado em `dc.date.issued`. |
 
 Esses eventos preservam a contagem total, mas não representam as datas, IPs ou sessões reais das visualizações ocorridas no sistema antigo.
 
@@ -104,7 +105,7 @@ Uma observação livre pode conter DOI, URL ou dados de periódico e ser classif
 
 | Arquivo | Finalidade |
 | --- | --- |
-| `saf_bundle/**/item_<id>/dublin_core.xml` | Metadados que serão importados no item. |
+| `saf_bundle/**/item_<id>/dublin_core.xml` e `saf_bundle/**/item_<id>/metadata_local.xml` | Metadados Dublin Core e do esquema `local` importados no item. |
 | `saf_bundle/**/item_<id>/contents` | Lista dos bitstreams e, quando necessário, sua restrição inicial. |
 | `saf_bundle/access_policies.json` | Manifesto de embargos e restrições por ID de origem. |
 | `routing_report.csv` | Curso, coleção de destino e itens sem mapeamento. |
