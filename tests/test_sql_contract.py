@@ -41,13 +41,23 @@ class MetadataSqlContractTests(unittest.TestCase):
         self.assertIn("'source', 'ud_biblioteca_publicacao_autor'", query)
         self.assertIn("'source', 'ud_biblioteca_publicacao_orientador'", query)
 
-    def test_query_maps_defense_date_only_to_date_issued(self):
+    def test_query_maps_publication_year_and_defense_date_separately(self):
         query = (PROJECT_ROOT / "sql" / "extract_metadata.sql").read_text(
             encoding="utf-8"
         )
 
-        self.assertIn('p.data_defesa AS "dc.date.issued"', query)
+        self.assertIn('p.ano_pub AS "dc.date.issued"', query)
+        self.assertIn('p.data_defesa AS "local.date.defense"', query)
         self.assertNotIn('AS "dc.date.submitted"', query)
+        self.assertNotIn('p.data_defesa AS "dc.date.issued"', query)
+
+    def test_query_extracts_cnpq_categories_as_separate_local_values(self):
+        query = (PROJECT_ROOT / "sql" / "extract_metadata.sql").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("FROM categoria_cnpq_ids cci", query)
+        self.assertIn('AS "local.cnpq.area"', query)
 
 
 if __name__ == "__main__":

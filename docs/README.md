@@ -19,3 +19,4 @@
 - [Registro de metadados](referencia/metadados-customizados.md).
 - [Pessoas e vínculos](referencia/pessoas-e-vinculos.md).
 - [Estatísticas históricas](referencia/estatisticas.md).
+- [Decisão sobre ano de publicação e data de defesa](rfc/0014-ano-de-publicacao-e-data-de-defesa.md).

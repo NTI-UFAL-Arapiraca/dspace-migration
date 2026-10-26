@@ -7,7 +7,8 @@ SELECT
     p.titulo_abstract AS "dc.title.alternative",
     p.resumo AS "dc.description.abstract[pt]",
     p.abstract AS "dc.description.abstract[en]",
-    p.data_defesa AS "dc.date.issued",
+    p.ano_pub AS "dc.date.issued",
+    p.data_defesa AS "local.date.defense",
     p.numero_paginas AS "dc.format.extent",
 
     -- Separação estratégica: Observações Gerais vs Citações/Fontes externas

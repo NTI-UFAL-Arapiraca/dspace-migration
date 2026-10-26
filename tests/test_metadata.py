@@ -20,7 +20,8 @@ class MetadataPipelineTests(unittest.TestCase):
             "dc.title.alternative": "Abstract",
             "dc.description.abstract[pt]": "<i>Mesmo resumo</i>",
             "dc.description.abstract[en]": "<i>Mesmo resumo</i>",
-            "dc.date.issued": "2024-05-03",
+            "dc.date.issued": "2024",
+            "local.date.defense": "2024-05-03",
             # Simula uma consulta antiga/personalizada: o pipeline deve
             # descartar este campo gerenciado internamente pelo DSpace.
             "dc.date.submitted": "2024-05-04",
@@ -105,7 +106,13 @@ class MetadataPipelineTests(unittest.TestCase):
                 ("description", "abstract", "en", "Mesmo resumo"), values
             )
             self.assertNotIn(("title", "alternative", None, "Abstract"), values)
-            self.assertIn(("date", "issued", None, "2024-05-03"), values)
+            self.assertIn(("date", "issued", None, "2024"), values)
+            local_root = ET.parse(item / "metadata_local.xml").getroot()
+            local_values = [
+                (node.attrib["element"], node.attrib["qualifier"], node.text)
+                for node in local_root.findall("dcvalue")
+            ]
+            self.assertIn(("date", "defense", "2024-05-03"), local_values)
             self.assertFalse(
                 any(element == "date" and qualifier == "submitted"
                     for element, qualifier, _, _ in values)

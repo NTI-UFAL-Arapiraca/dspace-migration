@@ -16,6 +16,12 @@
     <scope_note>Nome do campus de origem conforme ud_campus.name; não representa departamento nem editora.</scope_note>
   </dc-type>
   <dc-type>
+    <schema>local</schema>
+    <element>date</element>
+    <qualifier>defense</qualifier>
+    <scope_note>Data de defesa do trabalho, preservada separadamente do ano de publicação em dc.date.issued.</scope_note>
+  </dc-type>
+  <dc-type>
     <schema>dc</schema>
     <element>contributor</element>
     <qualifier>coadvisor</qualifier>

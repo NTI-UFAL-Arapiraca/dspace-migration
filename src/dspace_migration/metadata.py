@@ -151,18 +151,26 @@ def process_data(
             lambda x: None if pd.notna(x) and str(x).strip().lower() == "abstract" else x
         )
 
-    # 3. Padronização de Datas
-    print("Padronizando datas...")
-    def standardize_date(val):
+    # 3. Preservar a precisão do ano e normalizar a data de defesa.
+    print("Padronizando ano de publicação e data de defesa...")
+    def standardize_publication_year(val):
         if pd.isna(val):
             return val
         s = str(val).strip()
-        if re.match(r'^\d{4}$', s):
-            return f"{s}-01-01"
-        return s
+        match = re.fullmatch(r'(\d{4})(?:\.0+|-(?:\d{2})(?:-\d{2})?)?', s)
+        return match.group(1) if match else s
+
+    def standardize_defense_date(val):
+        if pd.isna(val):
+            return val
+        if hasattr(val, 'isoformat'):
+            return val.isoformat()
+        return str(val).strip()
 
     if 'dc.date.issued' in df.columns:
-        df['dc.date.issued'] = df['dc.date.issued'].apply(standardize_date)
+        df['dc.date.issued'] = df['dc.date.issued'].apply(standardize_publication_year)
+    if 'local.date.defense' in df.columns:
+        df['local.date.defense'] = df['local.date.defense'].apply(standardize_defense_date)
 
     # O acervo desta migração é composto por documentos em português do Brasil.
     # O campo faz parte do registro Dublin Core padrão do DSpace.
@@ -276,18 +284,24 @@ def process_data(
         })
 
         os.makedirs(item_dir, exist_ok=True)
-        roots = {'dc': ET.Element('dublin_core', schema='dc')}
-        current_schema = 'dc'
+        local_metadata_path = os.path.join(item_dir, 'metadata_local.xml')
+        if os.path.exists(local_metadata_path):
+            os.remove(local_metadata_path)
 
+        metadata_roots = {'dc': ET.Element('dublin_core', schema='dc')}
         invalid_xml_chars = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]')
 
-        def add_dcvalue(element, qualifier, language, value):
+        def add_metadata_value(schema, element, qualifier, language, value):
             if pd.notna(value) and str(value).strip() != "":
+                root = metadata_roots.get(schema)
+                if root is None:
+                    root = ET.Element('dublin_core', {'schema': schema})
+                    metadata_roots[schema] = root
                 for v in str(value).split('||'):
                     v = v.strip()
                     if v:
                         v_clean = invalid_xml_chars.sub('', v)
-                        dcval = ET.SubElement(roots[current_schema], 'dcvalue', element=element, qualifier=qualifier)
+                        dcval = ET.SubElement(root, 'dcvalue', element=element, qualifier=qualifier)
                         if language:
                             dcval.set('language', language)
                         dcval.text = v_clean
@@ -300,8 +314,7 @@ def process_data(
 
             if col_name.startswith(('dc.', 'local.')):
                 parts = col_name.split('.')
-                current_schema = parts[0]
-                roots.setdefault(current_schema, ET.Element('dublin_core', schema=current_schema))
+                schema = parts[0]
                 element = parts[1]
 
                 qualifier = 'none'
@@ -320,16 +333,16 @@ def process_data(
                         language = element.split('[')[1].replace(']', '')
                         element = element_part
 
-                add_dcvalue(element, qualifier, language, val)
+                add_metadata_value(schema, element, qualifier, language, val)
 
-        for schema, root in roots.items():
-            xml_str = ET.tostring(root, encoding='utf-8')
-            pretty_xml = minidom.parseString(xml_str).toprettyxml(indent="  ", encoding="utf-8").decode('utf-8')
+        for schema, metadata_root in metadata_roots.items():
             filename = 'dublin_core.xml' if schema == 'dc' else f'metadata_{schema}.xml'
-            Path(item_dir, filename).write_text(pretty_xml, encoding='utf-8')
-        # Evita carregar um metadata_local.xml obsoleto ao regenerar um item.
-        if 'local' not in roots:
-            Path(item_dir, 'metadata_local.xml').unlink(missing_ok=True)
+            xml_str = ET.tostring(metadata_root, encoding='utf-8')
+            parsed_xml = minidom.parseString(xml_str)
+            pretty_xml = parsed_xml.toprettyxml(indent="  ", encoding='utf-8').decode('utf-8')
+
+            with open(os.path.join(item_dir, filename), 'w', encoding='utf-8') as f:
+                f.write(pretty_xml)
 
     write_json(Path(saf_bundle_dir) / MANIFEST_NAME, people_manifest)
 

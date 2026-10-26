@@ -7,13 +7,14 @@ sem exigir a interface administrativa. O XML versionado é
 
 ## Campos necessários
 
-Estes oito campos são extensões dos esquemas `dc`, `local` e `person`, utilizadas pelo
+Estes nove campos são extensões dos esquemas `dc`, `local` e `person`, utilizadas pelo
 [`SQL de extração`](../../sql/extract_metadata.sql) e pelo gerador SAF:
 
 | Campo | Significado local | Origem e regra |
 | --- | --- | --- |
 | `local.course.name` | Curso ou programa | `ud_curso.name`. Guarda o curso, não o grau acadêmico. Também há roteamento por curso, mas a coleção não substitui esse valor descritivo do item. |
 | `local.campus.name` | Campus de origem | `ud_campus.name`. Guarda o campus, não necessariamente departamento ou editora. |
+| `local.date.defense` | Data de defesa | `ud_biblioteca_publicacao.data_defesa`, normalizada para ISO e preservada separadamente do ano de publicação. |
 | `dc.contributor.coadvisor` | Coorientador | Relação de coorientadores. Um valor por pessoa, no formato `Sobrenome, Nome`. |
 | `dc.contributor.referee` | Avaliador da banca | Relação de membros da banca. Um valor por pessoa, no formato `Sobrenome, Nome`. |
 | `local.identifier.legacy` | Identidade da pessoa na origem | `odoo:TABELA:ID`; usado por `apply-people` para retomada sem duplicar pessoas. |

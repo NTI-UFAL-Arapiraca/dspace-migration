@@ -9,7 +9,7 @@ O comando `extract-metadata` é responsável por:
 - Conectar ao banco de dados PostgreSQL.
 - Executar a consulta presente em `sql/extract_metadata.sql`.
 - Limpar tags HTML dos textos.
-- Padronizar datas para o formato ISO.
+- Preservar `ano_pub` como ano em `dc.date.issued` e normalizar `data_defesa` em `local.date.defense`.
 - **Rotear cada publicação** para a coleção correta com base no mapeamento de cursos (`dspace-organization/map.json`).
 - Criar a estrutura de diretórios do pacote SAF **hierárquica por polo e coleção**: `saf_bundle/<polo>/<coleção>/item_[id]/`.
 - Gerar o arquivo `dublin_core.xml` para cada item com base nos metadados extraídos.
@@ -18,8 +18,9 @@ O comando `extract-metadata` é responsável por:
 - Gerar `access_policies.json` na raiz do bundle para conservar as datas de liberação.
 
 
-Curso e campus ficam em `metadata_local.xml`; os campos `dc` ficam em
-`dublin_core.xml`. O manifesto `people.json` conserva identidades e papéis.
+Curso, campus e data de defesa ficam em `metadata_local.xml`; os campos `dc`
+ficam em `dublin_core.xml`. O ano de publicação mantém a precisão original em
+`dc.date.issued`. O manifesto `people.json` conserva identidades e papéis.
 `dc.language.iso` usa `pt_BR`; os resumos usam qualifiers `pt` e `en`.
 
 ## Arquivos e acesso
