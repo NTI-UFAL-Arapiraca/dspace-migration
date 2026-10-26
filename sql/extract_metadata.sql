@@ -107,7 +107,15 @@ SELECT
         FROM publicacao_p_chave_rel pcr
         JOIN ud_biblioteca_p_chave pc ON pc.id = pcr.ud_biblioteca_p_chave_id
         WHERE pcr.ud_biblioteca_publicacao_id = p.id
-    ) AS "dc.subject"
+    ) AS "dc.subject",
+    -- Cada vínculo CNPq é uma grande área própria, separada das palavras-chave.
+    (
+        SELECT string_agg(cat.name, '||' ORDER BY cat.name, cat.id)
+        FROM categoria_cnpq_ids cci
+        JOIN ud_biblioteca_publicacao_categoria_cnpq cat
+          ON cat.id = cci.ud_biblioteca_publicacao_categoria_cnpq_id
+        WHERE cci.ud_biblioteca_publicacao_id = p.id
+    ) AS "local.cnpq.area"
 
 FROM ud_biblioteca_publicacao p
 LEFT JOIN ud_biblioteca_publicacao_tipo t ON t.id = p.tipo_id

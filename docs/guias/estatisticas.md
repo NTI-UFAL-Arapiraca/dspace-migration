@@ -2,7 +2,10 @@
 
 Execute somente após concluir a importação SAF e preservar os `mapfile.txt`.
 Requer acesso ao banco legado, ao PostgreSQL do DSpace e ao Solr pela rede
-privada. Não publique suas portas em produção para executar esta etapa.
+privada. Execute em uma máquina que alcance as três fontes, por exemplo a
+máquina local de extração com acesso autorizado à rede do DSpace. O servidor
+de produção não precisa receber o banco `biblioteca`; não publique as portas
+dos bancos nem do Solr para executar esta etapa.
 
 ## 1. Conferir o ambiente
 

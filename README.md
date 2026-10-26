@@ -44,10 +44,13 @@ Os cadastros Person não criam contas EPerson.
 
 
 O projeto é empacotado via **`uv`** com código estruturado em `src/dspace_migration/`.
+Em produção, gere o SAF na máquina com acesso ao banco `biblioteca`, transfira-o
+para o servidor e importe-o de lá; o servidor não precisa desse banco. Siga o
+[roteiro de produção](docs/guias/migracao-producao.md).
 
 | Comando | Descrição |
 | --- | --- |
-| `uv run extract-metadata` | Conecta ao PostgreSQL legado, extrai e higieniza metadados, e gera a estrutura SAF hierárquica (`saf_bundle/<polo>/<coleção>/item_[id]/dublin_core.xml`). |
+| `uv run extract-metadata` | Conecta ao PostgreSQL legado, extrai e higieniza metadados, e gera a estrutura SAF hierárquica (`saf_bundle/<polo>/<coleção>/item_[id]/`) com `dublin_core.xml` e `metadata_local.xml`, incluindo as áreas CNPq. |
 | `uv run extract-pdfs` | Busca os PDFs binários (`bytea`) em lotes no PostgreSQL e salva os arquivos nas pastas correspondentes do SAF (busca recursiva). |
 | `uv run setup-dspace` | Cria a hierarquia de comunidades e coleções no DSpace via API REST (com base em `communities.json`), salvando os UUIDs em `collection_uuids.json`. |
 | `uv run generate-import-script` | Gera o script `import_all.sh` com um comando de importação por coleção, pronto para executar dentro do container Docker. |
@@ -56,7 +59,7 @@ O projeto é empacotado via **`uv`** com código estruturado em `src/dspace_migr
 | `uv run inject-stats` | Injeta no Solr as contagens históricas de visualizações dos itens importados. |
 | `uv run rebuild-oai` | Limpa e reconstrói o índice OAI-PMH a partir dos itens do DSpace. |
 | `uv run generate-sitemaps` | Gera os índices XML e HTML anunciados em `robots.txt`. |
-| `uv run migrate` | Executa o pipeline completo: extração, hierarquia, importação SAF, embargos, pessoas, estatísticas, OAI e sitemaps. |
+| `uv run migrate` | Executa o pipeline completo quando banco de origem e destino DSpace estão acessíveis no mesmo ambiente. Em produção, siga o roteiro com extração e importação separadas. |
 
 
 ## Estrutura de arquivos

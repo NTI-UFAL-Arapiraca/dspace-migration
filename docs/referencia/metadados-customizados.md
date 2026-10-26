@@ -7,14 +7,15 @@ sem exigir a interface administrativa. O XML versionado é
 
 ## Campos necessários
 
-Estes nove campos são extensões dos esquemas `dc`, `local` e `person`, utilizadas pelo
-[`SQL de extração`](../../sql/extract_metadata.sql) e pelo gerador SAF:
+Estes dez campos são extensões dos esquemas `dc`, `local` e `person`, usadas
+na extração SAF e na criação de perfis Person:
 
 | Campo | Significado local | Origem e regra |
 | --- | --- | --- |
 | `local.course.name` | Curso ou programa | `ud_curso.name`. Guarda o curso, não o grau acadêmico. Também há roteamento por curso, mas a coleção não substitui esse valor descritivo do item. |
 | `local.campus.name` | Campus de origem | `ud_campus.name`. Guarda o campus, não necessariamente departamento ou editora. |
 | `local.date.defense` | Data de defesa | `ud_biblioteca_publicacao.data_defesa`, normalizada para ISO e preservada separadamente do ano de publicação. |
+| `local.cnpq.area` | Grande área CNPq | Relação `categoria_cnpq_ids` → `ud_biblioteca_publicacao_categoria_cnpq.name`. Um valor por categoria, conforme o nome armazenado na origem. |
 | `dc.contributor.coadvisor` | Coorientador | Relação de coorientadores. Um valor por pessoa, no formato `Sobrenome, Nome`. |
 | `dc.contributor.referee` | Avaliador da banca | Relação de membros da banca. Um valor por pessoa, no formato `Sobrenome, Nome`. |
 | `local.identifier.legacy` | Identidade da pessoa na origem | `odoo:TABELA:ID`; usado por `apply-people` para retomada sem duplicar pessoas. |
@@ -24,9 +25,10 @@ Estes nove campos são extensões dos esquemas `dc`, `local` e `person`, utiliza
 
 Curso usa `local.course.name` e campus usa `local.campus.name`; os aliases
 antigos eram `dc.description.degree` e `dc.publisher.department`.
-Novos SAFs escrevem os campos em `metadata_local.xml`. `apply-people`
-converte os valores antigos nos itens já importados, sem excluir definições
-do registro. Veja [Pessoas e vínculos](pessoas-e-vinculos.md).
+Novos SAFs escrevem curso, campus, data de defesa e grandes áreas CNPq em
+`metadata_local.xml`. `apply-people` converte os valores antigos de curso e
+campus nos itens já importados, sem excluir definições do registro. Veja
+[Pessoas e vínculos](pessoas-e-vinculos.md).
 
 `dc.contributor.advisor` já existe no registro padrão do DSpace 10.1 e não
 precisa ser recriado. Títulos, autores, resumos, assuntos, datas e outros
@@ -59,7 +61,7 @@ executada pelo script de cadastro.
 
 ## Verificação e limites
 
-A administração permite inspecionar os oito campos cadastrados. Essa
+A administração permite inspecionar os dez campos cadastrados. Essa
 inspeção é independente da execução do registro pelo CLI.
 
 Cadastrar um campo permite armazenar seus valores; não cria automaticamente

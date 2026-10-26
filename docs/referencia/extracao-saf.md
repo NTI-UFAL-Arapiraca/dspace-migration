@@ -18,9 +18,11 @@ O comando `extract-metadata` é responsável por:
 - Gerar `access_policies.json` na raiz do bundle para conservar as datas de liberação.
 
 
-Curso, campus e data de defesa ficam em `metadata_local.xml`; os campos `dc`
-ficam em `dublin_core.xml`. O ano de publicação mantém a precisão original em
-`dc.date.issued`. O manifesto `people.json` conserva identidades e papéis.
+Curso, campus, data de defesa e grandes áreas CNPq ficam em
+`metadata_local.xml`; os campos `dc` ficam em `dublin_core.xml`. O ano de
+publicação mantém a precisão original em `dc.date.issued`. Cada categoria CNPq
+vinculada vira um valor `local.cnpq.area`, mantendo o valor de origem. O
+manifesto `people.json` conserva identidades e papéis.
 `dc.language.iso` usa `pt_BR`; os resumos usam qualifiers `pt` e `en`.
 
 ## Arquivos e acesso

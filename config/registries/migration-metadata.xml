@@ -22,6 +22,12 @@
     <scope_note>Data de defesa do trabalho, preservada separadamente do ano de publicação em dc.date.issued.</scope_note>
   </dc-type>
   <dc-type>
+    <schema>local</schema>
+    <element>cnpq</element>
+    <qualifier>area</qualifier>
+    <scope_note>Valor da grande área CNPq associada à publicação, conforme o nome da categoria na origem; um valor por categoria vinculada.</scope_note>
+  </dc-type>
+  <dc-type>
     <schema>dc</schema>
     <element>contributor</element>
     <qualifier>coadvisor</qualifier>

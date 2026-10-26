@@ -65,5 +65,7 @@ uv run generate-sitemaps --docker-container d10dev-dspace
 Abra `http://localhost:4000/`. Confira os campos em Editar, links para as
 pessoas e listas por papel. Revise resumos, ordem da banca, PDFs, embargos,
 `routing_report.csv` e `pdf_extraction_issues.csv`, quando presente.
-Depois da revisão, use o [roteiro de produção](migracao-producao.md) com
-SAF próprio e as credenciais do novo destino.
+Depois da revisão, use o [roteiro de produção](migracao-producao.md). O lote
+definitivo é extraído localmente do banco `biblioteca`, copiado ao servidor e
+importado no DSpace de produção; não é necessário disponibilizar esse banco no
+servidor.

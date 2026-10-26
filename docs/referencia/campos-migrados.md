@@ -4,7 +4,7 @@ Este documento descreve o que o pipeline realmente migra hoje. As fontes de verd
 
 O fluxo parte do banco PostgreSQL legado `biblioteca`, gera um pacote SAF e importa os itens no DSpace. Alguns dados não viram metadados Dublin Core: eles são usados para roteamento, controle de acesso, arquivos ou estatísticas.
 
-O cadastro dos seis campos locais e suas definições está documentado em
+O cadastro dos campos customizados e suas definições está documentado em
 [Metadados customizados](metadados-customizados.md), com XML versionado e
 execução pelo CLI oficial do DSpace. Orientador usa um campo padrão;
 `dc.publisher.place` e `dc.type.degree`, sem uso no fluxo atual, foram retirados
@@ -25,6 +25,7 @@ do cadastro.
 | Curso | `ud_biblioteca_publicacao.curso_id` → `ud_curso.name` | `local.course.name` | Também é usado para escolher a coleção de destino; veja a seção 4. |
 | Campus/departamento | `ud_biblioteca_publicacao.campus_id` → `ud_campus.name` | `local.campus.name` | Mantém a denominação existente na base. |
 | Palavras-chave | relação `publicacao_p_chave_rel` → `ud_biblioteca_p_chave.name` | `dc.subject` | Cada palavra-chave vira um valor separado no XML. |
+| Grande área CNPq | relação `categoria_cnpq_ids` → `ud_biblioteca_publicacao_categoria_cnpq.name` | `local.cnpq.area` | Cada associação vira um valor separado em `metadata_local.xml`, usando o nome armazenado na origem. Valores ordenados por nome e ID da categoria. |
 | Idioma do documento | Valor definido pela migração | `dc.language.iso` | Todos os itens recebem `pt_BR`, indicando português do Brasil. Não existe uma coluna de idioma consultada na origem. |
 
 ## 2. Pessoas Relacionadas à Publicação

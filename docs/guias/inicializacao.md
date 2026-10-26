@@ -22,24 +22,27 @@ Edite o `.env` e preencha:
 
 | Variável | Valor a conferir |
 | --- | --- |
-| `DB_*` | Conexão com o PostgreSQL legado. |
-| `SAF_BUNDLE_DIR` | Caminho absoluto da pasta deste lote. |
+| `DB_*` | Conexão com o PostgreSQL legado na máquina local de extração. Não é necessário no servidor para importar o bundle. |
+| `SAF_BUNDLE_DIR` | Caminho absoluto do SAF neste ambiente: diretório local de saída na extração e cópia persistente no servidor durante a importação. |
 | `DSPACE_API_URL` | API do destino: local ou pública. |
 | `DSPACE_API_USER` e `DSPACE_API_PASSWORD` | Conta administrativa do DSpace. |
 | `DSPACE_PERSON_COLLECTION_UUID` | Vazio na primeira preparação; depois, UUID salvo pelo script. |
 
 Para desenvolvimento, use `http://localhost:8080/server/api`. Na produção,
 use sua URL pública, como `https://repo.interno.example.org/dspace-server/api`.
-Crie a pasta SAF configurada. Ela deve ser a mesma de `DSPACE_SAF_HOST_DIR`
-no arquivo de ambiente do projeto `dspace-bca`.
+Na máquina de extração, crie a pasta local indicada por `SAF_BUNDLE_DIR`. No
+servidor, configure `SAF_BUNDLE_DIR` e `DSPACE_SAF_HOST_DIR` com o mesmo
+caminho absoluto da cópia do bundle. O projeto `dspace-bca` monta essa pasta
+em `/dspace/saf_bundle` durante a importação.
 
 Para lote novo, use pasta exclusiva. Para retomar trabalhos importados,
 preserve o SAF e os mapfiles originais. Ao trocar de destino, não reutilize
 `people-map.json` nem UUIDs de coleções do ambiente anterior.
 
-## 3. Disponibilizar a origem
+## 3. Disponibilizar a origem localmente
 
-Se `DB_*` já aponta para um banco acessível, prossiga para o passo 4.
+Este passo é feito somente na máquina que gera o SAF. Se `DB_*` já aponta para
+um banco acessível, prossiga para o passo 4.
 Para restaurar os dumps locais, confira seus nomes em `scripts/init-db.sh`,
 coloque-os em `dumps/` e execute:
 
@@ -53,7 +56,8 @@ Se o volume já tiver sido restaurado, apenas inicie o banco:
 docker compose -p biblioteca-migracao -f biblioteca-compose.yml up -d
 ```
 
-Confira a porta 5440 e as credenciais em `DB_*`.
+Confira a porta 5440 e as credenciais em `DB_*`. O servidor de produção não
+precisa restaurar nem executar o banco `biblioteca`.
 
 ## 4. Inicializar o destino
 
