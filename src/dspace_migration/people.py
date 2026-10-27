@@ -226,6 +226,14 @@ def _json(response, expected=(200,)) -> dict:
     return response.json()
 
 
+def _uuid(value, context):
+    """Valida UUIDs externas com contexto sem expor o valor recebido."""
+    try:
+        return str(UUID(value))
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise ValueError(f"UUID inválida: {context}") from exc
+
+
 def _values(metadata, field):
     return [value["value"] for value in metadata.get(field, [])]
 
@@ -308,7 +316,10 @@ def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False, r
     result.profile_issues = len(data.get("profile_issues", []))
     if not data["items"]:
         return result
-    collection_uuid = str(UUID(collection_uuid or os.getenv("DSPACE_PERSON_COLLECTION_UUID", "")))
+    collection_uuid = _uuid(
+        collection_uuid or os.getenv("DSPACE_PERSON_COLLECTION_UUID", ""),
+        "coleção de pessoas (--collection-uuid / DSPACE_PERSON_COLLECTION_UUID)",
+    )
     api_url = os.getenv("DSPACE_API_URL", "http://localhost:8080/server/api").rstrip("/")
     client = DSpaceClient(
         api_endpoint=api_url,
@@ -344,7 +355,7 @@ def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False, r
                     raise ValueError(f"Identificador {key} associado a item sem tipo Person")
                 if key in person_ids and person_ids[key] != item["uuid"]:
                     raise ValueError(f"Mais de uma Person para {key}")
-                person_ids[key] = str(UUID(item["uuid"]))
+                person_ids[key] = _uuid(item.get("uuid"), f"Person existente {key}")
                 person_items[item["uuid"]] = item
         if page + 1 >= response.get("page", {}).get("totalPages", 1):
             break
@@ -369,7 +380,7 @@ def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False, r
         resolved = client.resolve_identifier_to_dso(handles[int(source_id)])
         if resolved is None:
             raise ValueError(f"Handle não resolvido para item_{source_id}")
-        item_uuid = str(UUID(resolved.uuid))
+        item_uuid = _uuid(resolved.uuid, f"item resolvido pelo handle de item_{source_id}")
         item = _json(client.api_get(f"{api_url}/core/items/{item_uuid}", params={"projection": "allLanguages"}))
         _validate_fields(item["metadata"], fields, data["people"], person_ids)
         items[source_id] = item
@@ -467,7 +478,7 @@ def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False, r
             "name": person["name"], "metadata": metadata,
             "inArchive": True, "discoverable": True, "withdrawn": False, "type": "item",
         }), expected=(201,))
-        person_ids[key] = str(UUID(created["uuid"]))
+        person_ids[key] = _uuid(created.get("uuid"), f"Person criada {key}")
         write_json(checkpoint_path, {"api_url": api_url, "collection_uuid": collection_uuid, "people": person_ids})
     result.people_updated = len(enriched)
 
