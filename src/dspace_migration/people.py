@@ -41,6 +41,22 @@ PROFILE_FIELDS = {
     "lattes": "person.identifier.lattes",
     "degree": "local.person.degree",
 }
+# A sequência destes homônimos foi revisada; a extração ordena o manifesto e
+# os valores SAF pelo mesmo critério (sobrenome, nome, ID de origem).
+APPROVED_HOMONYM_SOURCE_ORDER = {
+    ("3842", "dc.contributor.referee", "Costa, Amanda Elias de Oliveira"): (
+        "odoo:ud_biblioteca_publicacao_orientador:1342",
+        "odoo:ud_biblioteca_publicacao_orientador:1420",
+    ),
+    ("3881", "dc.contributor.referee", "Alves, Johnatas Adelir"): (
+        "odoo:ud_biblioteca_publicacao_orientador:1459",
+        "odoo:ud_biblioteca_publicacao_orientador:1469",
+    ),
+    ("5936", "dc.contributor.referee", "Melo, Amanda Ferreira de"): (
+        "odoo:ud_biblioteca_publicacao_orientador:2734",
+        "odoo:ud_biblioteca_publicacao_orientador:2735",
+    ),
+}
 
 
 def write_json(path: Path, data: dict) -> None:
@@ -250,7 +266,57 @@ def _canonical(values):
     ]
 
 
-def _validate_fields(metadata, fields, people, person_ids=None):
+def _participant_keys(current, keys, people, person_ids, item_id, field):
+    """Match metadata values to source identities, using approved source order for reviewed homonyms."""
+    keys_by_name = {}
+    for key in keys:
+        keys_by_name.setdefault(people[key]["name"], []).append(key)
+
+    positions_by_name = {}
+    for index, value in enumerate(current):
+        positions_by_name.setdefault(value["value"], []).append(index)
+
+    assignments = [None] * len(current)
+    for name, positions in positions_by_name.items():
+        candidates = keys_by_name.get(name, [])
+        if len(candidates) != len(positions):
+            raise ValueError(f"Valores de {field} divergem da extração; revise o item antes de vincular")
+        if len(candidates) == 1:
+            assignments[positions[0]] = candidates[0]
+            continue
+
+        used_keys = set()
+        for index in positions:
+            authority = current[index].get("authority")
+            if not authority:
+                continue
+            matches = [key for key in candidates if person_ids and person_ids.get(key) == authority]
+            if len(matches) != 1 or matches[0] in used_keys:
+                raise ValueError(f"Autoridade conflitante em {field}")
+            assignments[index] = matches[0]
+            used_keys.add(matches[0])
+
+        approved_order = APPROVED_HOMONYM_SOURCE_ORDER.get((str(item_id), field, name))
+        if approved_order is None or tuple(candidates) != approved_order:
+            if any(assignments[index] is None for index in positions):
+                raise ValueError(f"Homônimos ambíguos em {field}; conciliação necessária")
+        else:
+            remaining = [key for key in approved_order if key not in used_keys]
+            for index in positions:
+                if assignments[index] is None:
+                    assignments[index] = remaining.pop(0)
+
+    used_authorities = set()
+    for index, key in enumerate(assignments):
+        authority = current[index].get("authority")
+        if authority:
+            if not person_ids or person_ids.get(key) != authority or authority in used_authorities:
+                raise ValueError(f"Autoridade conflitante em {field}")
+            used_authorities.add(authority)
+    return assignments
+
+
+def _validate_fields(metadata, fields, people, person_ids=None, *, item_id=None):
     for old, new in ACADEMIC_RENAMES.items():
         # Uma cópia interrompida pode ter publicado apenas o prefixo do campo.
         if old in metadata and new in metadata and _canonical(metadata[new]) != _canonical(metadata[old])[:len(metadata[new])]:
@@ -259,23 +325,7 @@ def _validate_fields(metadata, fields, people, person_ids=None):
         current = metadata.get(field, [])
         if Counter(value["value"] for value in current) != Counter(people[key]["name"] for key in keys):
             raise ValueError(f"Valores de {field} divergem da extração; revise o item antes de vincular")
-        # A ordem do item é preservada. Homônimos com autoridades diferentes
-        # podem ser distinguidos, mas texto puro ambíguo exige revisão.
-        names = [people[key]["name"] for key in keys]
-        if len(names) != len(set(names)):
-            if person_ids is None or any(not value.get("authority") for value in current):
-                raise ValueError(f"Homônimos ambíguos em {field}; conciliação necessária")
-        if person_ids is not None:
-            by_name = {}
-            for key in keys:
-                by_name.setdefault(people[key]["name"], set()).add(person_ids.get(key))
-            used = set()
-            for value in current:
-                authority = value.get("authority")
-                if authority:
-                    if authority not in by_name[value["value"]] or authority in used:
-                        raise ValueError(f"Autoridade conflitante em {field}")
-                    used.add(authority)
+        _participant_keys(current, keys, people, person_ids, item_id, field)
 
 
 @dataclass
@@ -382,7 +432,7 @@ def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False, r
             raise ValueError(f"Handle não resolvido para item_{source_id}")
         item_uuid = _uuid(resolved.uuid, f"item resolvido pelo handle de item_{source_id}")
         item = _json(client.api_get(f"{api_url}/core/items/{item_uuid}", params={"projection": "allLanguages"}))
-        _validate_fields(item["metadata"], fields, data["people"], person_ids)
+        _validate_fields(item["metadata"], fields, data["people"], person_ids, item_id=source_id)
         items[source_id] = item
 
     # Valida todos os perfis existentes antes de qualquer escrita. Uma fusão
@@ -485,7 +535,7 @@ def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False, r
     for source_id, item in items.items():
         metadata = item["metadata"]
         fields = data["items"][source_id]
-        _validate_fields(metadata, fields, data["people"], person_ids)
+        _validate_fields(metadata, fields, data["people"], person_ids, item_id=source_id)
         changed = False
         for old, new in ACADEMIC_RENAMES.items():
             if old not in metadata:
@@ -498,9 +548,11 @@ def _apply_people(saf_bundle_dir=None, collection_uuid=None, *, dry_run=False, r
         for field, keys in fields.items():
             current = metadata.get(field, [])
             desired = deepcopy(current)
-            by_name = {data["people"][key]["name"]: person_ids[key] for key in keys}
-            for value in desired:
-                value["authority"] = value.get("authority") or by_name[value["value"]]
+            participant_keys = _participant_keys(
+                current, keys, data["people"], person_ids, source_id, field,
+            )
+            for value, key in zip(desired, participant_keys):
+                value["authority"] = value.get("authority") or person_ids[key]
                 value["confidence"] = 600  # Choices.CF_ACCEPTED
             if _canonical(current) != _canonical(desired):
                 save_field(item, field, desired)
